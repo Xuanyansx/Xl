@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+</head>
+<body>
+    <center>
+        <input id="button" type="button" value="选择秒数开始测试" style="width: 900px;height: 300px;" onclick="cps()" disabled>
+        <div>
+            <label><input type="radio" name="m" id="0" value="5">5秒</label>
+            <label><input type="radio" name="m" id="1" value="10">10秒</label>
+            <label><input type="radio" name="m" id="2" value="15">15秒</label>
+            <label><input type="radio" name="m" id="3" value="30">30秒</label>
+        </div>
+        <div>
+            <b>倒计时<input type="text" disabled id="djs"></b>
+        </div>
+        <div>
+            <i>点击次数<input type="text" disabled id="cs"></i>
+        </div>
+    </center>
+    <script>
+        let val;
+        let Time;
+        let N = 0;//点击次数
+        let id = null;
+        let radioB = document.querySelectorAll('input[type="radio"]');
+
+        let djs = document.getElementById("djs");
+        let cs = document.getElementById("cs");
+        let Button = document.getElementById("button");
+        let Max = [0];
+        let D = new Date();
+        function log(Text){
+            console.log(Text);
+        }
+        radioB.forEach((i) => {
+            i.addEventListener('click',()=>{
+                val = document.querySelector('input[type="radio"]:checked').value;
+                Button.disabled = false;
+                Button.value = "开始测试";
+            })
+        });
+        function cps(){
+            radioB.forEach(i => {
+                i.disabled = true;
+            });
+            if(N==0){
+                djs.value = val;
+                Time = Number(val);
+                id = setInterval(() => {
+                    Time--;
+                    djs.value = Time;
+                    if (Time<=0){
+                        Button.disabled = true;
+                        Button.value = `测试结束，您的cps（每秒点击次数）是${N/val}\n再次选择秒数可以再次测试`;
+                        cs.value = null;
+                        djs.value = null;
+                        radioB.forEach(i => {
+                            i.checked = false;
+                            i.disabled = false;
+                        });
+                        // for (i in Max){
+                        //     if (N/val > Max[0]){
+                        //         Max.unshift(N/val)
+                        //     }
+                        //     // document.getElementsByClassName(`${i}`).value = `${Max[i]}(${D.getFullYear()}--${D.getMonth()}--${D.getDate()})`;
+                        //     log(`${Max[i]}(${D.getFullYear()}-${D.getMonth()}-${D.getDate()})`);
+                        // }
+                        N = 0;
+                        clearInterval(id);
+                        
+                    }
+                }, 1000);
+            }
+            N++;
+            cs.value = N;
+            Button.value = "点击！"
+        }
+    </script>
+</body>
+</html>

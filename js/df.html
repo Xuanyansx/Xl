@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        img{
+            height: 100px;
+            margin: auto; /* 居中方式1：使用 margin 属性 */
+            /* display: flex; */ /* 居中方式2：使用 flex 属性 */
+            /* justify-content: center;
+               align-items: center; */
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <img src="img\1.jpg" id="tp">
+    </div>
+    <script>
+        let sz = ["1.png","2.png","3.jpg"];
+        let d = 0;
+        function a(){
+            d++;
+            if(d>sz.length){
+                d = 1;
+            }
+            document.getElementById("tp").src = "img/"+d+".jpg";
+        }
+        setInterval('a()',1000);
+    </script>
+</body>
+</html>

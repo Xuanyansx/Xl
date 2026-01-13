@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        let b = 0;
+        let sum = [];
+        for (let i = 1; i < 6; i++) {
+            for (let o = 0; o < 5; o++) {
+                b += parseInt(prompt(`${i}的成绩`));
+            }
+            console.log(`第${i}位同学的平均成绩是${ b / 5 }`);
+            sum[i] = b/5
+            b = 0;
+        }
+        sum = sum.sort(function(a, b){return a - b}); 
+        console.log(sum[4])
+        
+    </script>
+</body>
+
+</html>

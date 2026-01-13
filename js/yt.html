@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <table border="1px">
+        <tr>
+            <td>
+                <input type="checkbox" id="qx" onclick="a(1)">全选
+            </td>
+            <td>
+                名称
+            </td>
+            <td>
+                单价
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input type="checkbox" id="mk" onclick="a(0)">
+            </td>
+            <td>
+                牛奶
+            </td>
+            <td>
+                2.5
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input type="checkbox" id="kl" onclick="a(0)">
+            </td>
+            <td>
+                可乐
+            </td>
+            <td>
+                4
+            </td>
+        </tr>
+    </table>
+    <script>
+        function a(bool) {
+            let qx = document.getElementById("qx");
+            let mk = document.getElementById("mk");
+            let kl = document.getElementById("kl");
+            if (bool) {
+                if (qx.checked) {
+                    mk.checked = true;
+                    kl.checked = true;
+                }
+                else {
+                    mk.checked = false;
+                    kl.checked = false;
+                }
+            }
+            else{   
+                if (mk.checked&&kl.checked){
+                    qx.checked = true;
+                }
+                else{
+                    qx.checked = false;
+                }
+                
+            }
+
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        let a = "admin";
+        let b = "123";
+        let aa = prompt("输入名称");
+        let bb = prompt("输入密码");
+        if (aa!=a&&bb!=b){
+            alert("密码或用户命错误");
+            
+        }
+        else{
+            alert(`正确，您的账号密码是${a},${b}`);
+            b = prompt("输入新密码");
+            alert(`新密码是${b}`);
+        }
+    </script>
+</body>
+</html>

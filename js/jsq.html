@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <table border="1px">
+        <tr>
+            <td>第一个数字</td>
+            <td>运算符</td>
+            <td>第二个数字</td>
+            <td>结果</td>
+        </tr>
+        <tr>
+            <td>
+                <input type="text" id="a">
+            </td>
+            <td>
+                <input type="text" disabled="disabled" id="d">
+            </td>
+            <td>
+                <input type="text" id="b">
+            </td>
+            <td>
+                <input type="text" disabled="disabled" id="c">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input type="button" value="+" onclick="ys(1)">
+            </td>
+            <td>
+                <input type="button" value="-" onclick="ys(2)">
+            </td>
+            <td>
+                <input type="button" value="*" onclick="ys(3)">
+            </td>
+            <td>
+                <input type="button" value="/" onclick="ys(4)">
+            </td>
+        </tr>
+    </table>
+    <input type="button" value="清除" onclick="ys(5)">
+    <input type="button" value="出结果" onclick="ys(6)">
+    <script>
+        var jg;
+        var N;
+        function ys(d) {
+            let a = document.getElementById("a");//第一个数
+            let b = document.getElementById("b");//第二个数
+            let c = document.getElementById("c");//结果
+            let fh = document.getElementById("d");//运算符
+            let gg = { 1: "+", 2: "-", 3: "*", 4: "/" };
+            if (gg[d]) { fh.value = gg[d] } else { console.log(111) }
+            (N && d == 6) ? null : N = d;
+            let aa = isNaN(a.value)
+            let bb = isNaN(b.value)
+            let fhh = (fh.value.length == 0)
+            let aaa = (a.value.length == 0)
+            let bbb = (a.value.length == 0)
+            // console.log(aa+bb+fhh+aaa+bbb)
+            // console.log(isNaN(a.value)||isNaN(b.value)||a.value.length==0||b.value.length==0||fh.length==0)
+            if (d == 6) {
+                if (isNaN(a.value) || isNaN(b.value) || a.value.length == 0 || b.value.length == 0 || fh.length == 0) {
+                    alert("你输入不是数字或者是运算符，数字没有输入全");
+                    a.value = null;
+                    b.value = null;
+                    c.value = null;
+                    N = undefined;
+                }
+                else if (d == 6) {
+                    switch (N) {
+                        case 1:
+                            jg = parseFloat(a.value) + parseFloat(b.value);
+                            break;
+                        case 2:
+                            jg = parseFloat(a.value) - parseFloat(b.value);
+                            break;
+                        case 3:
+                            jg = parseFloat(a.value) * parseFloat(b.value);
+                            break;
+                        case 4:
+                            if (b.value == 0) {
+                                alert("除数不能为零！！");
+                                a.value = null;
+                                b.value = null;
+                                c.value = null;
+                                N = undefined;
+                                break;
+                            }
+                            jg = parseFloat(a.value) / parseFloat(b.value);
+                            break;
+                        default:
+                            a.value = null;
+                            b.value = null;
+                            c.value = null;
+                            N = undefined;
+                            break;
+                    }
+                    c.value = jg;
+                    a.value = null;
+                    b.value = null;
+                    d.value = null;
+                    N == undefined;
+                }
+            }
+
+        }
+    </script>
+</body>
+
+</html>

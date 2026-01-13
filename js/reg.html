@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <table border="1px">
+        <tr>
+            <td>邮箱</td>
+            <td>
+                <input type="text" id="em">
+            </td>
+        </tr>
+        <tr>
+            <td>密码</td>
+            <td>
+                <input type="text" id="p">
+            </td>
+        </tr>
+        <tr>
+            <td>再次确认密码</td>
+            <td>
+                <input type="text" id="p2">
+            </td>
+        </tr>
+        <tr>
+            <td>qq</td>
+            <td>
+                <input type="text" id="qq">
+            </td>
+        </tr>
+        <tr>
+            <td>身份证</td>
+            <td>
+                <input type="text" id="sfz">
+            </td>
+        </tr>
+        <tr>
+            <td>选择问题</td>
+            <td>
+                <select id="xz">
+                    <option value="1">出生地</option>
+                    <option value="2">你朋友的名字</option>
+                    <option value="3">你喜欢的明星</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>答案</td>
+            <td>
+                <input type="text" id="da">
+            </td>
+        </tr>
+        <tr>
+            <input type="button" value="提交" onclick="tj()">
+        </tr>
+    </table>
+    <script>
+        let em = document.getElementById("em");
+        let p = document.getElementById("p");
+        let p2 = document.getElementById("p2");
+        let qq = document.getElementById("qq");-p
+        let sfz = document.getElementById("sfz");
+        let da = document.getElementById("da");
+        function tj(){
+            let emReg = /^ [a-zA-Z]{5+}@[a-zA-Z]{2,5}.com $/
+            let pReg = /^ [a-zA-Z]{6+} $/
+            let p2Reg = /^ [a-zA-Z]{6+} $/
+            let
+        }
+    </script>
+</body>
+</html>

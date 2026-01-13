@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        p {
+            font-family: '黑体';
+            color: #153ee6;
+            font-size: 1px;
+
+        }
+
+        body {
+            background: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <table border="1px">
+            <tr>
+                <td>
+                    <select onmousedown="a(0)" id="0">
+                        <option>
+                            字体
+                        </option>
+                    </select>
+                    <select onmousedown="a(1)" id="1">
+                        <option>
+                            字体颜色
+                        </option>
+                    </select>
+                    <select onmousedown="a(2)" id="2">
+                        <option>
+                            字体大小
+                        </option>
+                    </select>
+                    <select onmousedown="a(3)" id="3">
+                        <option>
+                            背景颜色
+                        </option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+    </center>
+    <div>
+        <p>这是一个text</p>
+        <p>这是一个text</p>
+        <p>这是一个text</p>
+        <p>这是一个text</p>
+    </div>
+    <script>
+        
+        let arr = [["字体","黑体", "楷体", "微软雅黑"],
+        [{"字体颜色":null},{ "黑色": "black" }, { "红色": "red" }, { "绿色": "green" }, { "蓝色": "blue" }, { "白色": "white" }, { "黄色": "yellow" }],
+        ["字体大小","1px", "5px", "15px"],
+        [{"背景颜色":null},{ "蓝色": "blue" }, { "白色": "white" }, { "黄色": "yellow" }]];
+        let selects = document.getElementsByTagName("select");
+        let p = document.getElementsByTagName("p");
+        let v;
+        let va;
+        function Style(id) {
+            for (let i of p) {
+                console.log("i:"+i);
+                switch (id) {
+                    case 0:
+                        i.style.fontFamily = arr[va][v];
+                        break;
+                    case 1:
+                        i.style.color = Object.values(arr[va][v]);
+                        break;
+                    case 2:
+                        i.style.fontSize = arr[va][v];
+                        break;
+                }
+            }
+        }
+        function a(val) {
+            va = val;
+            document.getElementById(`${ val }`).length = 0;
+            for (let i in arr[val]) {
+                let opt = new Option;
+                opt.innerHTML = Object.prototype.toString.call(arr[val][i]) === '[object Object]' ? Object.keys(arr[val][i]) : arr[val][i];
+                opt.value = i;
+                document.getElementById(`${ val }`).options.add(opt);
+            }
+        }
+        for (let j of selects) {
+            j.addEventListener('change', (event) => {
+                v = event.target.value;
+                console.log(v);
+                if (va == 3) {
+                    document.body.style.backgroundColor = Object.values(arr[va][v]);
+                }
+                else {
+                    console.log(va);
+                    Style(va);
+                }
+            })
+        }
+    </script>
+</body>
+</html>

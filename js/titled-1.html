@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <select onchange="a(value)">
+        <option value="0">
+            湖南
+        </option>
+        <option value="1">
+            湖北
+        </option>
+        <option value="2">
+            黑龙江
+        </option>
+    </select>
+
+    <select id="c" onchange="qq(value)">
+        <option>
+            选择
+        </option>
+    </select>
+
+    <select id="q">
+        <option>选择</option>
+    </select>
+</body>
+<script>
+    let ar = [['株洲', '长沙', '张家界'], ['武汉', '黄冈', '荆州'], ['哈尔滨市', '绥化市', '绥芬河']]
+    let qarr = [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]   ,[[11,22,33],[44,55,66],[77,88,99]]   ,[[111,222,333],[444,555,666],[777,888,999]]]
+    function a(val) {
+        let opt
+        document.getElementById("c").length = 0
+        for (let i = 0; i < ar[val].length; i++) {
+            opt = new Option
+            opt.innerHTML = ar[val][i]
+            opt.value = i
+            document.getElementById("c").options.add(opt);
+        }
+    }
+    function qq(val) {
+        let opt
+        document.getElementById("q").length = 0
+        for (let i = 0; i < qarr[val].length; i++) {
+            opt = new Option
+            opt.innerHTML = qarr[val][i]
+            document.getElementById("q").options.add(opt);
+        }
+    }
+</script>
+
+</html>

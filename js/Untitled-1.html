@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Random Number Generator</title>
+  <style>
+    .r{
+      height: 50px;
+      width: 50px;
+      color: #f80606;
+    }
+    .b{
+      height: 50px;
+      width: 50px;
+      color: #6308ff;
+    }
+  </style>
+  </head>
+  <body>
+    <input type="text" disabled="disabled" class="r" id="1" >
+    <input type="text" disabled="disabled" class="r" id="2">
+    <input type="text" disabled="disabled" class="r" id="3">
+    <input type="text" disabled="disabled" class="b" id="4">
+    <input type="text" disabled="disabled" class="b" id="5">
+    <input type="text" disabled="disabled" class="b" id="6">
+    <button type="button" onclick="start()">开始</button>
+    <button type="button" onclick="stop()">停止</button>
+    <script>
+      let a
+      function start() {
+        a = setInterval(() => {
+          document.getElementById('1').value = Math.ceil(Math.random()*9)
+          document.getElementById('2').value = Math.ceil(Math.random()*9)
+          document.getElementById('3').value = Math.ceil(Math.random()*9)
+          document.getElementById('4').value = Math.ceil(Math.random()*9)
+          document.getElementById('5').value = Math.ceil(Math.random()*9)
+          document.getElementById('6').value = Math.ceil(Math.random()*9)
+        }, 10)
+      }
+      function stop() {
+        clearInterval(a)
+      }
+
+
+      let v = ['张三',"女",18,2102]
+    </script>
+  </body>
+</html>

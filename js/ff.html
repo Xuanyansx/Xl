@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="hz" style="height: 30px;width: 50px;position: absolute;top: 90px;left: 10px;">
+        <img src="img/1.jpg" style="height: 30px;width: 50px;">
+    </div>
+    <script>
+        document.onkeydown=m;
+        let img = document.getElementById("hz");
+        function m(){
+            let kCode = event.keyCode;
+            console.log(kCode);
+            switch (kCode) {
+                case 87||38:
+                    img.s.top = "10px";
+                    break;
+                case 65||37:
+                    break;
+                case 83||65:
+                    break;
+                case 68||39:
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>

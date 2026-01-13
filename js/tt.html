@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <input type="button" value="ddd" onclick="xs()">
+    <div id="hz">
+        <span>1</span>
+        <span>12</span>
+        <span>13</span>
+        <span>14</span>
+    </div>
+    <script>
+        function xs(){
+            let hz = document.getElementById("hz");
+            if(hz.hidden){
+                hz.hidden = false;
+            }
+            else{
+                hz.hidden = true;
+            }
+        }
+    </script>
+</body>
+</html>

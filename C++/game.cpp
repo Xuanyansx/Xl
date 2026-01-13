@@ -1,0 +1,325 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <cstdio>
+#include <unistd.h>
+#include <cstdlib>
+#include <ctime>
+#include <conio.h>
+#include <vector>
+#include <windows.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+
+void displayGeamOver()
+{
+    printf("    /$$$$$$                                           /$$$$$$                                \n");
+    printf("   /$$__  $$                                         /$$__  $$                               \n");
+    printf("  | $$  \\__/  /$$$$$$  /$$$$$$/$$$$   /$$$$$$       | $$  \\ $$ /$$    /$$  /$$$$$$   /$$$$$$ \n");
+    printf("  | $$ /$$$$ |____  $$| $$_  $$_  $$ /$$__  $$      | $$  | $$|  $$  /$$/ /$$__  $$ /$$__  $$\n");
+    printf("  | $$|_  $$  /$$$$$$$| $$ \\ $$ \\ $$| $$$$$$$$      | $$  | $$ \\  $$/$$/ | $$$$$$$$| $$  \\__/\n");
+    printf("  | $$  \\ $$ /$$__  $$| $$ | $$ | $$| $$_____/      | $$  | $$  \\  $$$/  | $$_____/| $$      \n");
+    printf("  |  $$$$$$/|  $$$$$$$| $$ | $$ | $$|  $$$$$$$      |  $$$$$$/   \\  $/   |  $$$$$$$| $$      \n");
+    printf("   \\______/  \\_______/|__/ |__/ |__/ \\_______/       \\______/     \\_/     \\_______/|__/      \n");
+    printf("                                                                                             \n");
+    printf("                                                                                             \n");
+}
+
+
+
+char *input(char *str)
+{
+    char *res = (char *)malloc(64 * sizeof(char));
+    printf("%s", str);
+    scanf("%63s", res); // 限制输入长度
+    return res;
+}
+void hideCursor(SHORT x, SHORT y)
+{
+    COORD pos = {x, y};
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE); // 获取标准输出设备句柄
+    SetConsoleCursorPosition(hOut, pos);           // 两个参数分别是指定哪个窗体，具体位置
+
+    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO CursorInfo;
+    GetConsoleCursorInfo(handle, &CursorInfo); // 获取控制台光标信息
+    CursorInfo.bVisible = false;               // 隐藏控制台光标
+    SetConsoleCursorInfo(handle, &CursorInfo); // 设置控制台光标状态
+}
+
+int getRandomInt(int min, int max)
+{ // ai生成的，这个我不咋会用
+    // 使用当前时间作为种子，只需要在程序初始化时调用一次
+    static bool seedInitialized = false;
+    if (!seedInitialized)
+    {
+        srand(static_cast<unsigned>(time(nullptr)));
+        seedInitialized = true;
+    }
+
+    // 生成随机整数
+    int randomValue = min + rand() % (max - min + 1);
+
+    return randomValue;
+}
+
+int **init2D(int w, int h, int pos[], int pos1[]) // 初始化存储数组
+{
+    int **arr = (int **)malloc(h * sizeof(int *)); // 创建一个指针数组来存储数组，当然存储的数组也是指针数组所以用的是**而不是*
+    w--;
+    h--;
+    for (int i = 0; i <= w; i++)
+    {
+        arr[i] = (int *)malloc(w * sizeof(int)); // 如同arr一样，但是这个是存储整型的所以要用*,,,   淦忘记加sizeof导致报错了(((,,忘记这里面是存整型而又报错
+        for (int j = 0; j <= h; j++)
+        {
+            if (i == 0 || i == w)
+            {
+                arr[i][j] = -1;
+            }
+            else if (j == 0 || j == h)
+            {
+                arr[i][j] = -1;
+            }
+            else
+            {
+                arr[i][j] = 0;
+            }
+        }
+    }
+    arr[pos[0]][pos[1]] = 1;   // 写入蛇的初始位置
+    arr[pos1[0]][pos1[1]] = 2; // 写入食物的初始位置
+    return arr;
+    // 我是个啥笔，没看清楚返回值类型，定义的是int结果要求返回**int,不报错才怪，
+}
+
+void display2D(int w, int h, int **arr)
+{
+    int pos;
+    w--;
+    h--;
+    string display;
+    // 显示数组
+    for (int i = 0; i <= h; i++)
+    {
+        for (int j = 0; j <= w; j++)
+        {
+            pos = arr[i][j];
+            
+
+
+            display = display + (pos == -1 ? "□" : pos == 0 ? "  ": pos == 1   ? "■": "□");
+            
+            if (j == w)
+            {
+                display = display + "\n";
+            }
+        }
+    }
+    for (int c = 0;c<=40;c++){
+        hideCursor(0, 0);
+        cout << display << endl;
+    }
+
+}
+
+void moveSnak(std::vector<std::vector<int>> node, int nodeLen, int ***arr)
+{
+    int posY, posX;
+    // for (int i = 0; i < nodeLen; i++)
+    // {
+        posY = node[0][0];
+        posX = node[0][1];
+        (*arr)[posY][posX] = 1;
+    // }
+
+    return;
+}
+void clear()
+{
+    hideCursor(0, 0);
+    for (int i = 0; i <= 100; i++)  
+    {
+        for (int j = 0; j <= 100; j++)
+        {
+            printf("   ");
+            if (j==100)
+            {
+                printf("\n");
+            }
+        }
+    }
+    hideCursor(0,0);
+}
+int main()
+{
+
+RE:
+    int w, h, j = 0, i = 0, mY = 1, mX = 0, key, pos[2], pos1[2], snakeLen, lastX, lastY;
+    std::vector<std::vector<int>> node;
+Re:
+    w = atoi(input("\r输入游戏地图大小(大于等于7),最好是50:"));
+    if (w < 7)
+    {
+        printf("数据不合法请重新");
+        goto Re;
+    }
+    h = w;
+
+    // 随机生成初始蛇的位置
+    pos[0] = getRandomInt(1, h - 3);
+    pos[1] = getRandomInt(1, w - 3);
+
+// 随机生成初始食物的位置
+R:
+    pos1[0] = getRandomInt(1, h - 2);
+    pos1[1] = getRandomInt(1, w - 2);
+    if (pos[0] == pos1[0] && pos[1] == pos1[1])
+    {
+        goto R;
+    }
+
+    int **arr = init2D(w, h, pos, pos1); // 初始化游戏数据
+    node.push_back({pos[0], pos[1]});
+    int *hy = &node[0][0];
+    int *hx = &node[0][1];
+
+    for (;;)
+    {
+        display2D(w, h, arr);
+        usleep(14555);
+        if (_kbhit())
+        {
+            char key = _getch();
+            switch (key)
+            {
+            case 27: // ESC 键
+                exit(0);
+                break;
+            case 119: // 'w'
+            case 87:  // 'W'
+                mY = -1;
+                mX = 0;
+                break;
+            case 97: // 'a'
+            case 65: // 'A'
+                mY = 0;
+                mX = -1;
+                break;
+            case 115: // 's'
+            case 83:  // 'S'
+                mY = 1;
+                mX = 0;
+                break;
+            case 100: // 'd'
+            case 68:  // 'D'
+                mY = 0;
+                mX = 1;
+                break;
+            }
+        }
+        if (arr[*hy + mY][*hx + mX] == -1)
+        {
+            displayGeamOver();
+            printf("您的游戏分数：%d\n",snakeLen-1);
+            printf("点击回车重新开始游戏");
+            RRR:
+            char key = getch();
+                if(key==13){
+                    clear();
+                    goto RE;
+                }
+                else{
+                    goto RRR;
+                }
+        }
+        if (arr[*hy + mY][*hx + mX] == 2)
+        {
+            node.push_back({*hy, *hx});
+        Rr:
+            pos1[0] = getRandomInt(1, h - 2);
+            pos1[1] = getRandomInt(1, w - 2);
+            std::vector<int> Arr = {pos1[0],pos1[1]};
+            if (pos[0] == pos1[0] && pos[1] == pos1[1]||std::find(node.begin(), node.end(), Arr) != node.end())
+            {
+                goto Rr;
+            }
+            arr[pos1[0]][pos1[1]] = 2;
+        }
+        snakeLen = node.size();
+        lastY = node[snakeLen - 1][0];
+        lastX = node[snakeLen - 1][1];
+        printf("使用w，a，s，d移动");
+        if (snakeLen > 1)
+        {
+            for (int i = snakeLen - 1; i >= 1; i--)
+            {
+                node[i][0] = node[i - 1][0];
+                node[i][1] = node[i - 1][1];
+            }
+            printf("  >>>>分数：%d<<<<", snakeLen-1);
+        }
+        *hy = *hy + mY;
+        *hx = *hx + mX;
+        moveSnak(node, snakeLen, &arr);
+        arr[lastY][lastX] = 0;
+    }
+    system("pause");
+}
+
+
+
+
+/*
+      草稿
+
+
+
+高h = 7
+宽w = 7
+
+-1 -1 -1 -1 -1 -1 -1
+-1                -1
+-1                -1
+-1                -1
+-1                -1
+-1                -1
+-1 -1 -1 -1 -1 -1 -1
+
+开头一行坐标为[0,0~w](y,x)
+左边一列坐标为[0~h,0](y,x)
+底下一行坐标为[w,0~w](y,x)
+右边一列坐标为[0~h,h](y,x)
+
+
+
+列排序应该是
+!!!!注意坐标是相反的，要（y，x）取值
+0
+ 1
+ 2
+3
+ 4
+ 5
+6
+ 7
+ 8
+9
+
+1
+ 2
+ 3
+4
+
+
+
+
+2023/11/5 第一次运行成功，这是我第一次制作的游戏！！！！
+
+
+
+
+2023/12/6 .。。。。没有写注释，一些代码看不懂了(但是重新梳理一下应该会明白，但是我是知道我自己的——————懒)...
+*/

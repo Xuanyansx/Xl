@@ -1,0 +1,93 @@
+<html>
+    <head>
+        <title>简易计算器</title>
+        <script>
+            function ys(op) {
+                var a = parseInt(document.getElementById('a').value);
+                var b = parseInt(document.getElementById('b').value);
+                var c = 0;
+                var d = "";
+                switch(op) {
+                    case 1:
+                        c = a + b;
+                        d = "+";
+                        break;
+                    case 2:
+                        c = a - b;
+                        d = "-";
+                        break;
+                    case 3:
+                        c = a * b;
+                        d = "*";
+                        break;
+                    case 4:
+                        if (b == 0) {
+                            alert("除数不能为0");
+                            return;
+                        }
+                        c = a / b;
+                        d = "/";
+                        break;
+                    case 5:
+                        document.getElementById('a').value = "";
+                        document.getElementById('b').value = "";
+                        document.getElementById('c').value = "";
+                        document.getElementById('d').value = "";
+                        break;
+                    case 6:
+                        if (isNaN(a) || isNaN(b)) {
+                            alert("请输入数字");
+                            return;
+                        }
+                        ys(op-1);
+                        break;
+                    default:
+                        alert("操作符错误");
+                        return;
+                }
+                document.getElementById('c').value = c;
+                document.getElementById('d').value = d;
+            }
+        </script>
+    </head>
+    <body>
+        <table border="1px">
+            <tr>
+                <td>第一个数字</td>
+                <td>运算符</td>
+                <td>第二个数字</td>
+                <td>结果</td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id = "a">
+                </td>
+                <td>
+                    <input type="text" disabled="disabled" id = "d">
+                </td>
+                <td>
+                    <input type="text" id = "b">
+                </td>
+                <td>
+                    <input type="text" disabled="disabled" id = "c">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="button" value="+" onclick="ys(1)">
+                </td>
+                <td>
+                    <input type="button" value="-" onclick="ys(2)">
+                </td>
+                <td>
+                    <input type="button" value="*" onclick="ys(3)">
+                </td>
+                <td>
+                    <input type="button" value="/" onclick="ys(4)">
+                </td>
+            </tr>
+        </table>
+        <input type="button" value="清除" onclick="ys(5)">
+        <input type="button" value="出结果" onclick="ys(6)">
+    </body>
+</html>

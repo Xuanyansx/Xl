@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+</head>
+<body>
+    <table border="1px">
+        <tr>
+            <td onclick="qh(1)" style="background-color: blue;">
+                <p>点卡</p>
+                <div id="dk">
+                    <p>游戏<input type="text"></p>
+                    <p>面值<input type="text"></p>
+                </div>
+            </td>
+            <td onclick="qh(0)" style="background-color: brown;">
+                <p>手机</p>
+                <div hidden="true" id="sj">
+                    <p>手机游戏<input type="text"></p>
+                    <p>面值<input type="text"></p>
+                </div>
+            </td>
+        </tr>
+    </table>    
+    <script>
+        function qh(bool){
+            let dk = document.getElementById("dk");
+            let sj = document.getElementById("sj");
+            if(!bool){
+                dk.hidden = true;
+                sj.hidden = false;
+            }
+            else{
+                dk.hidden = false;
+                sj.hidden = true;
+            }
+        }
+    </script>
+</body>
+</html>
