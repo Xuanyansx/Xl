@@ -143,4 +143,18 @@
 #             ans=res
 # print(ans)
 
-s = ['.','G','.','.']
+# s = ['.','G','.','.']
+
+
+
+n = input()
+k = int(input())
+
+nums = '123456789abcdef'
+
+ans = 0
+for i in range(len(n)):
+    a = int(n[::-1][i])
+    aa = k**i
+    ans +=a*aa
+print(ans)
