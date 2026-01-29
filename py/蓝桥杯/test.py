@@ -147,14 +147,25 @@
 
 
 
-n = input()
-k = int(input())
+# n = input()
+# k = int(input())
 
-nums = '123456789abcdef'
+# nums = '123456789abcdef'
 
-ans = 0
-for i in range(len(n)):
-    a = int(n[::-1][i])
-    aa = k**i
-    ans +=a*aa
-print(ans)
+# ans = 0
+# for i in range(len(n)):
+#     a = int(n[::-1][i])
+#     aa = k**i
+#     ans +=a*aa
+# print(ans)
+n = 0
+import time
+while n<=10:
+    time.sleep(0.3)
+    a = f"\n\raaaaa{n}"
+    b = f"\rbbbbb{n}"
+    print(a,end="")
+    print(b,end="")
+    n+=1
+
+
