@@ -33,7 +33,6 @@ def check_date(date):
     return 1<=mm<=12 and 1<=dd<=m[mm]
 
 while True:
-    yyyy = f'{int(yyyy)+1}'
     mmdd = yyyy[::-1]
     if check_date(yyyy+mmdd) and flag:
         print(yyyy+mmdd)
@@ -42,4 +41,5 @@ while True:
     if yyyy[:2] == yyyy[2:] and check_date(yyyy+mmdd):
         print(yyyy+mmdd)
         break
-
+    yyyy = f'{int(yyyy)+1}'
+    
