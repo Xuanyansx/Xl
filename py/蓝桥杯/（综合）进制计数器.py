@@ -35,10 +35,10 @@ while True:
     nk = input(f"{n} 是什么进制的")
     k = input("处理成 2 8 10 16 进制")
 
-    if nk !='10':
-        res = k_to_shi(n,nk)
-        if k == '10':
-            print(res)
-        else:
-            res = shi_to_k(res,k)
-            print(res)
+
+    res = k_to_shi(n,nk)
+    if k == '10':
+        print(res)
+    else:
+        res = shi_to_k(res,k)
+        print(res)
