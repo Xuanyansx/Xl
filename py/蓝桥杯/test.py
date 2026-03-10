@@ -158,14 +158,18 @@
 #     aa = k**i
 #     ans +=a*aa
 # print(ans)
-n = 0
-import time
-while n<=10:
-    time.sleep(0.3)
-    a = f"\n\raaaaa{n}"
-    b = f"\rbbbbb{n}"
-    print(a,end="")
-    print(b,end="")
-    n+=1
+# n = 0
+# import time
+# while n<=10:
+#     time.sleep(0.3)
+#     a = f"\n\raaaaa{n}"
+#     b = f"\rbbbbb{n}"
+#     print(a,end="")
+#     print(b,end="")
+#     n+=1
+
+from itertools import accumulate
+
+accumulate()
 
 
