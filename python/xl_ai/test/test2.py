@@ -65,10 +65,14 @@ func_menu = {
 
 
 while True:
+    user_input = prompt_toolkit.prompt("[Xl_AI]< ")
+    if user_input in ["exit","q","quit"]:
+        print("已退出\n再见！")
+        break
     messages.append(
         {
             "role":"user",
-            "content":prompt_toolkit.prompt("[Xl_AI]< ")
+            "content":user_input
         }
     )
     reply_message = send_msg(messages).choices[0].message
