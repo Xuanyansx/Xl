@@ -53,9 +53,7 @@ class UserClinet():
                 time.sleep(0.5)
 
         for tool in mcp_tools:
-            self.tools.append({...})
-            for tool in mcp_tools:
-                self.tools.append({
+            self.tools.append({
                     "type":"function",
                     "function":{
                         "name":tool.name,
