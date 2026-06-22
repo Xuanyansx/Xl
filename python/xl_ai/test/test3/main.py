@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 import json
 import asyncio
-
+import subprocess, os
 
 class UserClinet():
     def __init__(
@@ -33,15 +33,36 @@ class UserClinet():
         client = self.mcp_client
         mcp_tools = await client.list_tools()
 
+        server_names = list(mcp_config["mcpServers"].keys())
+        loaded = set()
+        for t in mcp_tools:
+            prefix = t.name.split("_")[0] if "_" in t.name else t.name
+            loaded.add(prefix)
+            # 我知道这非常不优雅，但是我也只能通过这个方式获取本地加载的服务了   2026/06/22 12:12
+
+        failed = [s 
+                  for s in server_names 
+                  if s not in loaded
+                  ]
+        if failed:
+            print(f"[Xl_AI] MCP 服务加载失败: {', '.join(failed)}，清理残余进程...")
+            import subprocess, os
+            for _ in range(3):  
+                subprocess.run(["pkill", "-P", str(os.getpid())])
+                import time
+                time.sleep(0.5)
+
         for tool in mcp_tools:
-            self.tools.append({
-                "type":"function",
-                "function":{
-                    "name":tool.name,
-                    "description":tool.description,
-                    "parameters":tool.inputSchema
-                }
-            })
+            self.tools.append({...})
+            for tool in mcp_tools:
+                self.tools.append({
+                    "type":"function",
+                    "function":{
+                        "name":tool.name,
+                        "description":tool.description,
+                        "parameters":tool.inputSchema
+                    }
+                })
 
 
     async def send_msg(self):
@@ -125,4 +146,4 @@ except Exception as e:
     print(e)
 
 
-#mcp也是让我适配出来了了，还是个通用的mcp客户端，但是关于其中的异步在里面的作用我始终是没有理解，到底是哪步传入任务给事件循环呢？
+#mcp也是让我适配出来了了，还是个通用的mcp客户端，但是关于其中的异步在里面的作用我始终是没有理解，到底是哪步传入任务给事件循环呢？ 2026/06/22 2:13
