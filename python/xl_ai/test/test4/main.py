@@ -1,27 +1,43 @@
 from openai import OpenAI
-from fastmcp import Client
-from test.test4.mcp_config import mcp_config
+from fastmcp import Client,FastMCP
+from mcp_config import mcp_config
 from prompt_toolkit import PromptSession
 from rich.console import Console
 from rich.markdown import Markdown
 import json
 import asyncio
-import subprocess, os
+from pathlib import Path
+from typing import Annotated
 
+
+
+# ================================================= 2026/06/23 23:17 记忆系统基本实现，不过记忆的卸载没有完成
 class UserClinet():
     def __init__(
-            self,key,config,
+            self,key,config,long_memory,
             url="https://api.deepseek.com",
-            prompt=" 你是xlai"
+            prompt=f"""
+                    [提示词]
+                    你是一个会合理使用所有工具的安全ai,
+                    你有长期记忆的能力，当觉得当前对话必须记忆的时候可以调用工具记住这些内容
+                    记忆是主动触发的不必询问用户的意见
+                    如果觉得长期记忆太长了，那就需要简练里面的内容了\n
+                    """,
+            tool=[],
+
             ):
         
         self.ai_client = OpenAI(
             api_key=key,
             base_url=url
         )
-        self.mcp_client = Client(config,timeout=420)
+        self.long_memory = long_memory
+        self.prompt = prompt
+        self.config = config
+        self.mcp_client = None
+        self.max_token = 300000
         self.session = PromptSession()
-        self.tools = []
+        self.tools = tool
         self.messages = [
             {
                 "role":"system",
@@ -29,32 +45,17 @@ class UserClinet():
             }
         ]
 
+    async def init_mcp(self,config="Default"):
+        if config == "Default":
+            config = self.config
+        self.mcp_client = Client(config,timeout=420)
+        
+
     async def init_tool(self):
-        client = self.mcp_client
-        mcp_tools = await client.list_tools()
-
-        server_names = list(mcp_config["mcpServers"].keys())
-        loaded = set()
-        for t in mcp_tools:
-            prefix = t.name.split("_")[0] if "_" in t.name else t.name
-            loaded.add(prefix)
-            # 我知道这非常不优雅，但是我也只能通过这个方式获取本地加载的服务了   2026/06/22 12:12
-
-        failed = [s 
-                  for s in server_names 
-                  if s not in loaded
-                  ]
-        if failed:
-            print(f"[Xl_AI] MCP 服务加载失败: {', '.join(failed)}，清理残余进程...")
-            for _ in range(3):  
-                subprocess.run(["pkill", "-P", str(os.getpid())])
-                import time
-                time.sleep(0.5)
+        mcp_tools = await self.mcp_client.list_tools()
 
         for tool in mcp_tools:
-            self.tools.append({...})
-            for tool in mcp_tools:
-                self.tools.append({
+            self.tools.append({
                     "type":"function",
                     "function":{
                         "name":tool.name,
@@ -63,8 +64,73 @@ class UserClinet():
                     }
                 })
 
+    async def use_tool(self,name,age):
+        client = self.mcp_client
+        # await client.list_tools_mcp
+
+
+    async def digest_chat(self):
+        history_to_compress = self.messages.copy()
+        
+        temp = history_to_compress + [
+            {
+                "role": "user",
+                "content": """
+                    请暂停本次对话，然后完成下面的要求
+                    【任务】请基于我们本次的完整的对话历史，生成一份结构化总结。严格按以下五个模块输出，不要遗漏任何模块。
+
+                    【核心话题】
+                    - 概括每次话题所围绕的核心问题或主题。
+
+                    【关键结论】
+                    - 逐条列出对话中明确达成的共识、决定、解决方案或重要发现。每条用一句话说明，避免空泛。
+
+                    【调用的工具/功能】
+                    - 列出对话中实际使用的工具、功能或外部接口。
+                    - 每条格式为：“工具/功能名称：简要说明调用目的及获得的关键结果”。
+
+                    【未完成任务】
+                    - 列出对话中已提出但尚未解决、尚未给出最终答案或需要进一步确认的问题。如果没有，写“无”。
+
+                    【待办事项】
+                    - 根据对话内容，列出接下来建议执行的具体行动项。每条需指明负责人或角色（例如：用户、助手等）。如果没有，写“无”。
+                """
+            }
+        ]
+
+        reply = self.ai_client.chat.completions.create(
+            model="deepseek-v4-flash",
+            messages=temp,
+        )
+        print(f"[上下文压缩]> \n{reply.choices[0].message.content}") #debug
+        print(f"压缩后token总数：{reply.usage.total_tokens}")
+
+
+        self.messages = [
+            {
+                "role": "system",
+                "content": self.prompt
+            },
+            {
+                "role":"assistant",
+                "content":self.long_memory
+            },
+            {
+                "role": "user",
+                "content": f"【历史对话摘要】\n{reply}"
+            }
+        ]
+        
+        
+
 
     async def send_msg(self):
+
+        messages=self.messages
+        messages.insert(1,{
+            "role":"assistant",
+            "content":f"长期记忆{self.long_memory}"
+        })
         t = self.tools
         res = self.ai_client.chat.completions.create(
             model="deepseek-v4-flash",
@@ -77,10 +143,22 @@ class UserClinet():
             print(f"总计 Token 数: {res.usage.total_tokens}")
             print(f"缓存命中 Token 数: {res.usage.prompt_cache_hit_tokens}")
             print(f"缓存未命中 Token 数: {res.usage.prompt_cache_miss_tokens}")
+            if res.usage.total_tokens > self.max_token:
+                print("触发上下文压缩")
+                await self.digest_chat()
             return res
+
+    def edit_long_memory(self,canshu: str) -> str:
+        content = canshu["content"]
+        self.long_memory = content
+        with open(f"{Path(__file__).parent}/memory/long_memory.md", mode="w", encoding="UTF-8") as f:
+            f.write(content)
+        return "ok"
 
     async def run(self):
         console = Console()
+        await self.init_mcp()
+
         client = self.mcp_client
 
         async with client:
@@ -108,11 +186,16 @@ class UserClinet():
                         
                         tool_name = tool.function.name
                         canshu = tool.function.arguments
+
                         print(f"\t[run]>{canshu}")
+
                         canshu = json.loads(canshu)
                         tool_id = tool.id
                         try:
-                            res = await client.call_tool(tool_name,canshu)
+                            if tool_name=="edit_long_memory":
+                                res = self.edit_long_memory(canshu)
+                            else:
+                                res = await client.call_tool(tool_name,canshu)
                         except Exception as error:
                             res = f"超时！{error}"
                         self.messages.append(
@@ -132,17 +215,38 @@ class UserClinet():
 
                     # console.print(f"\t{Markdown(reply_message.content)}")
                     
-        
+
 
 async def main():
 
-    client = UserClinet("sk-54e96e93441647938ac1986980e7ed3f",mcp_config)
+    tool = [{
+        "type": "function",
+        "function": {
+            "name": "edit_long_memory",
+            "description": "编辑长期记忆（全量覆盖模式）。当检测到重要事实、用户背景、长期偏好或重复性需求时，主动调用。长期记忆只存储必须记住的重要信息。采用'全量替换'策略，传入的记忆文本必须是该条目当前最新的完整状态。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "长期记忆内容。如果是用户相关的记忆，建议在前面加上'[用户画像]'前缀。必须包含该记忆条目完整的、最新的所有信息，因为此操作会完全覆盖之前的记忆。"
+                    }
+                },
+                "required": ["content"],
+                "additionalProperties": False
+            },
+            "strict": True
+        }
+    }]
+    with open(f"{Path(__file__).parent}/memory/long_memory.md", mode="r", encoding="UTF-8") as f:
+        long_m = f.read()
+    client = UserClinet("sk-54e96e93441647938ac1986980e7ed3f",mcp_config,long_m,tool=tool)
     await client.run()
-try:
-    asyncio.run(main())
-except Exception as e:
-    print("[Xl_AI]> \n再见！")
-    print(e)
+# try:
+asyncio.run(main())
+# except Exception as e:
+#     print("[Xl_AI]> \n再见！")
+#     print(e)
 
 
 #mcp也是让我适配出来了了，还是个通用的mcp客户端，但是关于其中的异步在里面的作用我始终是没有理解，到底是哪步传入任务给事件循环呢？ 2026/06/22 2:13
