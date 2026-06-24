@@ -8,6 +8,8 @@ import json
 import asyncio
 from pathlib import Path
 from typing import Annotated
+from colorama import init, Fore
+
 
 
 
@@ -19,8 +21,12 @@ class UserClinet():
             prompt=f"""
                     [提示词]
                     你是一个会合理使用所有工具的安全ai,
-                    你有长期记忆的能力，当觉得当前对话必须记忆的时候可以调用工具记住这些内容
+                    你有长期记忆的能力，当觉得当前对话必须记忆的时候可以调用本地记忆工具记住这些内容
+                    本地记忆成本极低，你被鼓励频繁调用本地记忆
+                    只要是有持续价值的信息，果断记录；
                     记忆是主动触发的不必询问用户的意见
+                    同时遇到不懂的什么如果cha
+                    也可以主动去回忆自己的本地记忆
                     如果觉得长期记忆太长了，那就需要简练里面的内容了\n
                     """,
             tool=[],
@@ -31,6 +37,7 @@ class UserClinet():
             api_key=key,
             base_url=url
         )
+        self.load_tools = ["load_memory"]
         self.long_memory = long_memory
         self.prompt = prompt
         self.config = config
@@ -122,7 +129,21 @@ class UserClinet():
         ]
         
         
+        init(autoreset=True)
 
+        async def color_print(text, color="white",end="\n"):
+            colors = {
+                'red': Fore.RED,
+                'green': Fore.GREEN,
+                'blue': Fore.BLUE,
+                'yellow': Fore.YELLOW,
+                'cyan': Fore.CYAN,
+                'magenta': Fore.MAGENTA,
+                'white': Fore.WHITE
+            }
+            
+            style = colors[color]
+            print(style + text,end=end)
 
     async def send_msg(self):
 
@@ -135,7 +156,8 @@ class UserClinet():
         res = self.ai_client.chat.completions.create(
             model="deepseek-v4-flash",
             messages=self.messages,
-            tools=t
+            tools=t,
+            stream=
         )
         if hasattr(res, 'usage'):
             print(f"输入 Token 数: {res.usage.prompt_tokens}")
@@ -196,6 +218,9 @@ class UserClinet():
                                 res = self.edit_long_memory(canshu)
                             else:
                                 res = await client.call_tool(tool_name,canshu)
+                                if tool_name in self.load_tools:
+                                    ...
+
                         except Exception as error:
                             res = f"超时！{error}"
                         self.messages.append(
@@ -223,7 +248,14 @@ async def main():
         "type": "function",
         "function": {
             "name": "edit_long_memory",
-            "description": "编辑长期记忆（全量覆盖模式）。当检测到重要事实、用户背景、长期偏好或重复性需求时，主动调用。长期记忆只存储必须记住的重要信息。采用'全量替换'策略，传入的记忆文本必须是该条目当前最新的完整状态。",
+            "description": """
+        编辑长期记忆（全量覆盖模式）。
+        长期记忆只存储必须记住的重要信息。
+        如检测到重要事实、用户背景、长期偏好或重复性需求时，主动调用。
+        自身同类错误重复出现（记录"错误类型+正确规则"）
+        采用'全量替换'策略，传入的记忆文本必须是该条目当前最新的完整状态。
+            
+            """,
             "parameters": {
                 "type": "object",
                 "properties": {

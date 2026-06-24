@@ -65,20 +65,13 @@ def add_memory(
     index:Annotated[str,"索引名称"],
     description:Annotated[str,"描述"],
     content:Annotated[str,"记忆内容"],
-    time:Annotated[str,"记录的时间,要是dddd/mm格式的字符串"]
+    time:Annotated[str,"记录的时间,要是dddd/MM HH:mm格式的字符串"]
     ):
     """
-     添加一条本地记忆。本地记忆存储在外部文件中，
-     本地记忆是非常低廉的，只要是你觉得应该要记忆的即可调用工具存储                                                                                                                          
-     不会自动加载到对话中，需要通过 list_memory_index 查看目录，                                                                                                           
-     通过 load_memory 按需读取。                                                                                                                                           
-                                                                                                                                                                           
-     适合存储的内容：(仅为建议，参考即可)                                                                                                                                                      
-     - 项目文档、设计方案、代码片段                                                                                                                                        
-     - 历史对话的详细摘要                                                                                                                                                  
-     - 外部资料、研究笔记                                                                                                                                                  
-     - 用户交代的长期任务及其进度
-
+    向已有记忆文件追加新内容。不产生新索引，可频繁调用。适合在同主题下持续记录新事实、新进展、新决策。
+    调用前可用list_memory_index 查看所有索引。
+    触发信号(可自行决策)：
+        参考示例：当前对话内容与某个已有索引相关，且出现了值得记录的新信息时。
     """
     
     indexs = None
@@ -109,7 +102,9 @@ def insert_memory(
     content:Annotated[str,"插入内容"]
     ):
     """
-    往现的某段记忆中插入内容
+    向已有记忆文件追加新内容。不产生新索引，可频繁调用。
+    适合在同主题下持续记录新事实、新进展、新决策。
+
     """
 
     with open(f"{Path(__file__).parent}/memory/{index}.md",mode="a",encoding="UTF-8") as f:
@@ -121,16 +116,14 @@ def insert_memory(
 
 
 @mcp.tool
-def load_memory(
-        index:Annotated[str,"索引名称"]
-        ):
+def load_long_memory():
     """
     读取长期记忆
     其实长期记忆就存在系统提示词里面
 
     """
     try:
-        with open(f"{Path(__file__).parent}/memory/{index}.md",mode="r",encoding="UTF-8") as f:
+        with open(f"{Path(__file__).parent}/memory/long_memory.md",mode="r",encoding="UTF-8") as f:
             memory = f.read()
     except Exception as e:
         return e
