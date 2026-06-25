@@ -157,7 +157,7 @@ class UserClinet():
             model="deepseek-v4-flash",
             messages=self.messages,
             tools=t,
-            stream=True
+            # stream=
         )
         if hasattr(res, 'usage'):
             print(f"输入 Token 数: {res.usage.prompt_tokens}")
@@ -177,10 +177,8 @@ class UserClinet():
             f.write(content)
         return "ok"
 
-        
-
     async def run(self):
-        self.console = Console()
+        console = Console()
         await self.init_mcp()
 
         client = self.mcp_client
@@ -200,10 +198,9 @@ class UserClinet():
                 reply = await self.send_msg()
 
                 reply_message = reply.choices[0].message
+                self.messages.append(reply_message)
                 print(f"{'='*10}\n[Xl_AI]>")
-                bot_msg = await self.stream_print(reply_message.content)
-                self.messages.append(bot_msg)
-
+                console.print(Markdown(reply_message.content))
                 # print(reply_message.content)
 
                 while reply_message.tool_calls:
@@ -234,11 +231,11 @@ class UserClinet():
                             }
                         )
                     reply_message = await self.send_msg()
+                    reply_message = reply_message.choices[0].message
+                    self.messages.append(reply_message)
+
                     print(f"{'='*10}\n[Xl_AI]>")
-                    bot_msg = await self.stream_print(reply_message.content)
-                    self.messages.append(bot_msg)
-
-
+                    console.print(Markdown(reply_message.content))
                     # print(reply_message.content)
 
                     # console.print(f"\t{Markdown(reply_message.content)}")
@@ -282,7 +279,6 @@ asyncio.run(main())
 # except Exception as e:
 #     print("[Xl_AI]> \n再见！")
 #     print(e)
-
 
 
 #mcp也是让我适配出来了了，还是个通用的mcp客户端，但是关于其中的异步在里面的作用我始终是没有理解，到底是哪步传入任务给事件循环呢？ 2026/06/22 2:13
