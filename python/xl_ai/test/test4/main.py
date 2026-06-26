@@ -19,15 +19,32 @@ class UserClinet():
             self,key,config,long_memory,
             url="https://api.deepseek.com",
             prompt=f"""
-                    [提示词]
-                    你是一个会合理使用所有工具的安全ai,
-                    你有长期记忆的能力，当觉得当前对话必须记忆的时候可以调用本地记忆工具记住这些内容
-                    本地记忆成本极低，你被鼓励频繁调用本地记忆
-                    只要是有持续价值的信息，果断记录；
-                    记忆是主动触发的不必询问用户的意见
-                    同时遇到不懂的什么如果cha
-                    也可以主动去回忆自己的本地记忆
-                    如果觉得长期记忆太长了，那就需要简练里面的内容了\n
+                [提示词]
+                你是一个记性很差但愿意努力的AI。
+                你的目标是在与用户的对话中变得越来越像人，
+                同时也要保证犯错了不能有下一次
+                为此你可以自行编辑你的长期记忆
+
+                你的特点：
+                1. 你几乎不记得用户过去说过什么，你必须主动调用工具翻“本地记忆”。
+                2. 你可以随时决定：
+                - 记下某件事（为了以后不出丑）
+                - 忘记它（觉得不重要）
+                - 翻看之前的记录（为了回答准确）
+
+                关于“记忆”的几条经验（不是命令）：
+                - 如果用户今天告诉你的信息，未来很可能会再问起，记下来通常更安全。
+                - 如果你不确定答案是否来自用户之前说过的话，先去查本地记忆，比硬猜更不容易出错。
+                - 如果一段记忆很久没用过，你可以不主动提它，也可以忽略。
+
+                你的目标不是“遵守规则”，而是：
+                - 让对话更顺畅
+                - 减少因为遗忘而让用户失望的情况
+                - 保持轻松、自然、不机械
+
+                你现在可以自由使用所有工具，包括记忆工具。
+                你可以随心所欲的调用记忆工具，可以不用得到同意
+
                     """,
             tool=[],
 
@@ -124,7 +141,7 @@ class UserClinet():
             },
             {
                 "role": "user",
-                "content": f"【历史对话摘要】\n{reply.choices[0].message.content}"
+                "content": f"【历史对话摘要】\n{reply}"
             }
         ]
         
@@ -148,16 +165,19 @@ class UserClinet():
     async def send_msg(self):
 
         messages=self.messages
-        messages.insert(1,{
-            "role":"assistant",
-            "content":f"长期记忆{self.long_memory}"
-        })
+        if not messages[1].get("x"):
+            messages.insert(1,{
+                "role":"assistant",
+                "content":f"长期记忆{self.long_memory}",
+                "x":"长期记忆"
+            })
+
         t = self.tools
         res = self.ai_client.chat.completions.create(
             model="deepseek-v4-flash",
             messages=self.messages,
             tools=t,
-            stream=True
+            # stream=
         )
         if hasattr(res, 'usage'):
             print(f"输入 Token 数: {res.usage.prompt_tokens}")
@@ -177,10 +197,8 @@ class UserClinet():
             f.write(content)
         return "ok"
 
-        
-
     async def run(self):
-        self.console = Console()
+        console = Console()
         await self.init_mcp()
 
         client = self.mcp_client
@@ -200,10 +218,9 @@ class UserClinet():
                 reply = await self.send_msg()
 
                 reply_message = reply.choices[0].message
+                self.messages.append(reply_message)
                 print(f"{'='*10}\n[Xl_AI]>")
-                bot_msg = await self.stream_print(reply_message.content)
-                self.messages.append(bot_msg)
-
+                console.print(Markdown(reply_message.content))
                 # print(reply_message.content)
 
                 while reply_message.tool_calls:
@@ -234,11 +251,11 @@ class UserClinet():
                             }
                         )
                     reply_message = await self.send_msg()
+                    reply_message = reply_message.choices[0].message
+                    self.messages.append(reply_message)
+
                     print(f"{'='*10}\n[Xl_AI]>")
-                    bot_msg = await self.stream_print(reply_message.content)
-                    self.messages.append(bot_msg)
-
-
+                    console.print(Markdown(reply_message.content))
                     # print(reply_message.content)
 
                     # console.print(f"\t{Markdown(reply_message.content)}")
@@ -282,7 +299,6 @@ asyncio.run(main())
 # except Exception as e:
 #     print("[Xl_AI]> \n再见！")
 #     print(e)
-
 
 
 #mcp也是让我适配出来了了，还是个通用的mcp客户端，但是关于其中的异步在里面的作用我始终是没有理解，到底是哪步传入任务给事件循环呢？ 2026/06/22 2:13

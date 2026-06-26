@@ -26,5 +26,17 @@
   "对话记录-流式输出改造": {
     "description": "对test4/main.py进行流式输出改造",
     "time": "2026/06/24 16:05"
+  },
+  "用户画像": {
+    "description": "用户画像",
+    "time": "2026/06/25 23:00"
+  },
+  "重要信息": {
+    "description": "Weave的核心信息、项目结构、彩蛋等关键记录",
+    "time": "2026/06/25 23:20"
+  },
+  "对话记录-VulnClaw架构分析与Weave重构讨论": {
+    "description": "与xuanyansx深入分析VulnClaw项目架构，讨论Weave未来的重构方向",
+    "time": "2026/06/25 23:55"
   }
 }
