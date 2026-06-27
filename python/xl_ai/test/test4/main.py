@@ -52,7 +52,9 @@ class UserClinet():
         
         self.ai_client = OpenAI(
             api_key=key,
-            base_url=url
+            base_url=url,
+            timeout=30.0,
+            max_retries=3
         )
         self.load_tools = ["load_memory"]
         self.long_memory = long_memory
@@ -177,6 +179,7 @@ class UserClinet():
             model="deepseek-v4-flash",
             messages=self.messages,
             tools=t,
+            timeout=
             # stream=
         )
         if hasattr(res, 'usage'):
@@ -224,8 +227,9 @@ class UserClinet():
                 # print(reply_message.content)
 
                 while reply_message.tool_calls:
+                    n = len(self.messages)
                     for tool in reply_message.tool_calls:
-                        
+                        del_lsit = []
                         tool_name = tool.function.name
                         canshu = tool.function.arguments
 
@@ -239,7 +243,7 @@ class UserClinet():
                             else:
                                 res = await client.call_tool(tool_name,canshu)
                                 if tool_name in self.load_tools:
-                                    ...
+                                    del_lsit.append(n)
 
                         except Exception as error:
                             res = f"超时！{error}"
@@ -247,15 +251,24 @@ class UserClinet():
                             {
                             "role":"tool",
                             "tool_call_id":tool_id,
-                            "content":f"执行结果{res}"
+                            "content":f"执行结果{res}",
+                            # "load_tool":flag
                             }
                         )
+
                     reply_message = await self.send_msg()
                     reply_message = reply_message.choices[0].message
-                    self.messages.append(reply_message)
+                    for i in del_lsit:
+                        self.messages[i]["content"] = "读取完毕，内容删除。如需读取记忆，还请调用工具加载"
 
+                    self.messages.append(reply_message)
                     print(f"{'='*10}\n[Xl_AI]>")
                     console.print(Markdown(reply_message.content))
+
+
+
+
+
                     # print(reply_message.content)
 
                     # console.print(f"\t{Markdown(reply_message.content)}")
@@ -299,6 +312,5 @@ asyncio.run(main())
 # except Exception as e:
 #     print("[Xl_AI]> \n再见！")
 #     print(e)
-
 
 #mcp也是让我适配出来了了，还是个通用的mcp客户端，但是关于其中的异步在里面的作用我始终是没有理解，到底是哪步传入任务给事件循环呢？ 2026/06/22 2:13

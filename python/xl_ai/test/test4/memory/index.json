@@ -12,8 +12,8 @@
     "time": "2026/06/24"
   },
   "对话记录-Skill系统设计讨论": {
-    "description": "与xuanyansx讨论xl_ai的Skill系统设计方案，包括安装方式兼容、自动加载等",
-    "time": "2026/06/24"
+    "description": "与xuanyansx深入讨论VulnClaw skill系统分析与Weave skill系统设计方向",
+    "time": "2026/06/26 01:15"
   },
   "对话记录-关于名字的再次确认": {
     "description": "与xuanyansx再次确认名字来源，并对行为指引做了优化",
@@ -28,15 +28,23 @@
     "time": "2026/06/24 16:05"
   },
   "用户画像": {
-    "description": "用户画像",
-    "time": "2026/06/25 23:00"
+    "description": "用户系统环境信息",
+    "time": "2026/06/26 15:30"
   },
   "重要信息": {
-    "description": "Weave的核心信息、项目结构、彩蛋等关键记录",
-    "time": "2026/06/25 23:20"
+    "description": "记忆系统热插拔机制说明",
+    "time": "2026/06/26 00:10"
   },
   "对话记录-VulnClaw架构分析与Weave重构讨论": {
     "description": "与xuanyansx深入分析VulnClaw项目架构，讨论Weave未来的重构方向",
     "time": "2026/06/25 23:55"
+  },
+  "对话记录-Skill设计与Grype安装": {
+    "description": "与xuanyansx讨论Skill系统设计、网络安全MCP搜索、发现自身架构、安装grype-mcp",
+    "time": "2026/06/26 02:15"
+  },
+  "对话记录-Burp测试": {
+    "description": "用户打开Burp Suite进行测试，暂时关闭Weave",
+    "time": "2026/06/26 02:30"
   }
 }

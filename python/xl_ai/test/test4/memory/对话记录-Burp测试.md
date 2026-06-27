@@ -1,0 +1,1 @@
+xuanyansx要打开Burp Suite做测试，暂时关闭了Weave。Kali容器之前已测试过，运行正常。Burp没有预装在Kali容器中。

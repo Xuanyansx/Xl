@@ -31,14 +31,14 @@ mcp_config = {
             ],
             "keep_alive": False
         },
-        # "servers": {
-        #     "cve-intelligence": {
-        #     "type": "stdio",
-        #     "command": "npx", 
-        #     "args": ["-y", "mcp-cve-intelligence-server-lite@latest"],
-        #     "keep_alive":False
-        #     }
-        # }
-
+        "eip": {
+        "command": "eip-mcp",
+        "args": [],
+        "env": {}
+        },
+        "kali": {
+        "command": "node",
+        "args": ["/home/xuanyansx/Desktop/Xl/python/xl_ai/test/test4/kali-mcp/dist/index.js"]
+        }
     }
 }
