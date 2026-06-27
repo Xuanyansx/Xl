@@ -179,8 +179,6 @@ class UserClinet():
             model="deepseek-v4-flash",
             messages=self.messages,
             tools=t,
-            timeout=
-            # stream=
         )
         if hasattr(res, 'usage'):
             print(f"输入 Token 数: {res.usage.prompt_tokens}")
