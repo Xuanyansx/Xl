@@ -1,3 +1,6 @@
+
+# 此项目用于思路和理论的实践，不代表项目是这样实践的 2026/06/28 17:08
+
 from openai import OpenAI
 from fastmcp import Client,FastMCP
 from mcp_config import mcp_config
