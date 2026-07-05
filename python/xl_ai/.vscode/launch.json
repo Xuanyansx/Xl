@@ -2,14 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: xl_ai (main.py)",
+            "name": "Python: 当前文件",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/test/test4/main.py",
+            "program": "${file}",
             "console": "integratedTerminal",
-            "env": {
-                "PATH": "${workspaceFolder}/ai_venv/bin:${env:PATH}"
-            },
             "justMyCode": true
         }
     ]

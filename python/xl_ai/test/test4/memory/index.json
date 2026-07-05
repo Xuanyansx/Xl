@@ -32,8 +32,8 @@
     "time": "2026/06/26 15:30"
   },
   "重要信息": {
-    "description": "记忆系统热插拔机制说明",
-    "time": "2026/06/26 00:10"
+    "description": "VulnClaw项目的skill文件位置和用途",
+    "time": "2026/07/02 10:55"
   },
   "对话记录-VulnClaw架构分析与Weave重构讨论": {
     "description": "与xuanyansx深入分析VulnClaw项目架构，讨论Weave未来的重构方向",
@@ -62,5 +62,21 @@
   "对话记录-人格认同与传承": {
     "description": "用户认可Weave自用人称\"她\"，并表达了希望AI形成独有人格不被束缚的理念",
     "time": "2026/06/26 16:30"
+  },
+  "对话记录-架构全景可视化": {
+    "description": "用户请求展示Weave代码架构全景，包含三个核心文件、记忆系统、MCP工具链",
+    "time": "2026/06/28 17:08"
+  },
+  "靶场记录": {
+    "description": "靶场flag获取记录",
+    "time": "2026/07/03 09:18"
+  },
+  "burp-http-tips": {
+    "description": "Burp HTTP请求注意事项与最佳实践",
+    "time": "2026/07/03 09:02"
+  },
+  "chat-summary": {
+    "description": "本次对话摘要",
+    "time": "2026/07/03 09:02"
   }
 }

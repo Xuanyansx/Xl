@@ -70,7 +70,7 @@ def add_memory(
     index:Annotated[str,"索引名称"],
     description:Annotated[str,"描述"],
     content:Annotated[str,"记忆内容"],
-    time:Annotated[str,"记录的时间,要是dddd/MM HH:mm格式的字符串"]
+    time:Annotated[str,"记录的时间,要是yyyy/MM/dd HH:mm格式的字符串"]
     ):
     """
     向已有记忆文件追加新内容。不产生新索引，可频繁调用。适合在同主题下持续记录新事实、新进展、新决策。
