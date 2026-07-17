@@ -3,10 +3,12 @@ import asyncio
 import inspect
 from openai import OpenAI
 from datetime import datetime
+from pydantic import BaseModel
 import custom_structs as structs
 from xl_mcp.mcp_cs import xlmcp_client
 from prompt_toolkit import PromptSession
 from typing import Annotated,get_type_hints
+
 
 
 
@@ -24,14 +26,15 @@ class llm:
             base_url=base_url           
         )
 
-    def chat(self,tools,msg):
+    def chat(self,tools,msg,is_user = False):
         client = self._client
         res = client.chat.completions.create(
             model=self.modle,
             tools=tools,
             messages=msg
         )
-        self._message.clear()
+        if is_user:
+            self._message.clear()
         return res   
 
 
@@ -40,7 +43,6 @@ class Todo:
     def __init__(self):
         self.todo_list = {}
         self.todo_data = []
-
 
     def create_todo(self,
                     title:Annotated[str,"todo标题"],
@@ -53,26 +55,43 @@ class Todo:
         """
         todo_id = len(self.todo_list)
         todo = structs.Todo(todo_id,title,description,time)
-        self.todo_list[todo_id] = todo
+        self.todo_list[f'{todo_id}'] = todo
+        return f"ok id:{todo_id}"
 
-    # def add_batch_task(self,
-    #                    tasks:Annotated[dict[],"包含task的字典"],
-    #                    todo_id
-    #                    ):
-    #     todo = self.todo_list[todo_id]
-    #     todo.tasks
+    def submit_tasks(self,
+                    tasks:Annotated[structs.ttttt,
+                    "包含task的列表,任务按下标顺序来"],
+                    todo_id:Annotated[str,"目标todo的id"]
+                    ):
+        """
+        往todo提交任务列表（必须是一次性提交
+        """
+        todo = self.todo_list[todo_id]
+        # res = {
+        #     "title":todo.title
+        # }
+        # content = ""
+        for i in tasks['todos']:
+            todo.add_task(i["description"],i["content"])
+            # content+=f"[]"
+        return todo
 
-
-    def get_todo_list(self):
+    def execute_todo(self,todo_id,task_id):
         ...
 
-    def get_tasks(self):
+    def _get_todo_list(self):
+        ...
+
+    def _get_tasks(self):
         ...
 
     def task_done(self,todo_id,task_id):
         ...
 
-    def del_todo(self,todo_id):
+    def todo_done(self,todo_id,task_id):
+        ...
+
+    def _del_todo(self,todo_id):
         ...
     
 
@@ -135,20 +154,39 @@ class default_tools:
         for i in self._tools:
             for j in inspect.getmembers(i, inspect.ismethod):
                 if j[0][0] != '_':
-                    self.ctools[j[0]] = j[1]
-        for i in list(self.ctools.values()):
-            self._tool_info.append(self._get_tool_info(i))
+                    self.ctools[j[0]] = (j[1],i)
+
+        for i,j in list(self.ctools.values()):
+            self._tool_info.append(self._get_tool_info(i,j.__class__.__name__))
 
 
-
-    def _get_tool_info(self, func):
+    def _get_tool_info(self, func,class_name):
+        def _resolve_refs(node, defs):
+            if isinstance(node, dict):
+                if '$ref' in node:
+                    key = node['$ref'].split('/')[-1]
+                    return _resolve_refs(defs[key], defs)
+                return {k: _resolve_refs(v, defs) for k, v in node.items()}
+            if isinstance(node, list):
+                return [_resolve_refs(v, defs) for v in node]
+            return node
+        tool_name = f"{class_name}_{func.__name__}"
         properties = {}
         required = []
         for i,j in get_type_hints(func,include_extras=True).items():
-            properties[i] = {
-                "description":j.__metadata__[0],
-                "type":self._TYPE_MAP[j.__origin__.__name__]
-            }
+            origin = j.__origin__
+            if isinstance(origin, type) and issubclass(origin, BaseModel):
+                schema = origin.model_json_schema()
+                defs = schema.pop('$defs', {})
+                if defs:
+                    schema = _resolve_refs(schema, defs)
+                schema["description"] = j.__metadata__[0]
+                properties[i] = schema
+            else:
+                properties[i] = {
+                    "description": j.__metadata__[0],
+                    "type": self._TYPE_MAP[origin.__name__]
+                }
 
         for i,j in inspect.signature(func).parameters.items():
             if j.default==inspect.Parameter.empty:
@@ -157,7 +195,7 @@ class default_tools:
         return {
             "type": "function",
             "function": {
-                "name": func.__name__,
+                "name": tool_name,
                 "description": inspect.getdoc(func) or "",
                 "parameters": {
                     "type": "object",
@@ -174,6 +212,7 @@ class default_tools:
 
 
     def tool_call(self,name,args):
+        name = name.split('_', 1)[1]
         res = "没有这个工具"
         if name in self.ctools:
             res = self.ctools[name](**args)
@@ -197,11 +236,28 @@ class MessageManager:
         }
 
         self._message = []
+        self._temp_message_index = None
         self._clean_index = []
+        self._user_index = None
 
     def edit_prompt(self,title,content):
         #没有的title就插入，有的话就是全量替换 2026/07/04 14:37
         self._sysprompt[title] = content
+
+    def set_user_prompt(self,msg):
+        if self._user_index:
+            index = len(self._message)
+            self._user_index = index
+        self,self._message[index] = msg
+
+    def clear_temp(self):
+        index = self._temp_message_index
+        if index:
+            self._message = self._message[:index]
+            self._temp_message_index = len(
+                self._message
+            )-1
+
 
 
     def get(self):
@@ -218,7 +274,7 @@ class MessageManager:
         ]
         return prompt+self._message
 
-    def add(self,msg,clean_index=[]):
+    def add(self,msg,clean_index=[] ):
         self._clean_index.extend(
             (len(self._message) + i,j)
             for i,j in clean_index
@@ -253,9 +309,12 @@ class FrontendAgent:
         self.default_tools = default_tools()
         self._mcp_client = xlmcp_client()
         self._clean_tools = []
-        self._prompt_tool = []
+        self._todo_tools = ["execute_todo","submit_tasks",""]
+
         self._llm = llm(api_key,base_url,self._message)
         self._chat = self._llm.chat
+
+
 
     def _call_tool(self,tool_calls):
         result = []
@@ -269,14 +328,49 @@ class FrontendAgent:
             args = tool.function.arguments
             args = json.loads(args)
 
-            if tool_name in self._clean_tools:
-                clean_tools_index.append((i,tool_name))
 
             if tool_name in self.default_tools.ctools:
                 res = self.default_tools.tool_call(tool_name,args)
             else:
                 res = self._mcp_client.tool_call(tool_name,args)
-                
+
+            if tool_name in self._clean_tools:
+                clean_tools_index.append((i,tool_name))
+
+            if tool_name.split('_', 1)[0] == "Todo":
+                # 2026/07/05 23:30: 耦合就耦合吧，现在最重要的吧todo跑通，而不是解耦合
+                name = tool_name.split('_', 1)[1]
+                if name == "submit_tasks":
+                # 2026/07/06 00:29: 不要在想解耦合了，但我意识到在耦合我就难受（  
+
+                    content = f"任务提交成功，现在开始依次完成未完成的任务吧\n"
+                    todo_list = f"""
+                    [{res.ttitle}] [状态] {res.status}
+                    
+                    """
+                    for i in res.tasks:
+                        todo_list+=f"""
+                        [编号] {i.id} [状态] {i.status}
+                        """
+                    content+=todo_list
+                    user_prompt = {
+                        "role":"user",
+                        "content":content
+                    }
+                    self._message.set_user_prompt(user_prompt)
+
+                if tool_name.split('_', 1)[1] == "execute_todo":
+                    # 2026/07/06 00:35: 不管规范了，先把功能跑起来再说
+                    self._message.clear_temp()
+                    
+                # r = self._chat([],self._message.get()[:-1])
+
+    
+            if tool_name in self._todo_tools:
+                prompt = {
+                    # "title":
+                }
+
             result.append(
                 {
                 "role":"tool",
@@ -308,7 +402,8 @@ class FrontendAgent:
         self._message.add(msg)
 
         reply = self._chat(
-            tools,self._message.get()
+            tools,self._message.get(),
+            is_user=True
             ).choices[0].message
         
         yield {
@@ -363,6 +458,7 @@ class FrontendAgent:
         
         # return res,tres
 if __name__ == "__main__":
+    t = default_tools()
     ...
 
 

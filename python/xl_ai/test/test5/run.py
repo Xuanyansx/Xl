@@ -1,4 +1,4 @@
-import agent
+import agent_fork as agent
 import xl_mcp.mcp_cs
 import prompt_toolkit
 import xl_config.config as c
@@ -15,16 +15,19 @@ def main():
     max_token = Config["max_token"]
     momory_path = Config["momory_path"]
 
-    llm = agent.FrontendAgent(
+    llm = agent.Agent(
         key,
         tools=[],
     )
     while True:
         user = prompt_toolkit.prompt("[Xl_AI]< ")
-        for i in llm.send_msg(user):
-            print("[Xl_AI]>",f"""
-            {i}
-            """)
-        
+        for i in llm.send(user):
+            print("[Xl_AI]>")
+            if i["type"] == "bot":
+                print(i["body"]["msg"])
+            else:
+                print(i["body"]["name"])
+                print("is_work=>>>>",i["is_work"])
+                print(i["todo"])       
 
 main()
