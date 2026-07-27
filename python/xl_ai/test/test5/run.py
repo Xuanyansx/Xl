@@ -18,6 +18,8 @@ def main():
     llm = agent.Agent(
         key,
         tools=[],
+        base_url=url,
+        modle=model
     )
     while True:
         user = prompt_toolkit.prompt("[Xl_AI]< ")
@@ -25,9 +27,12 @@ def main():
             print("[Xl_AI]>")
             if i["type"] == "bot":
                 print(i["body"]["msg"])
+                print(i["raw_data"]) 
             else:
                 print(i["body"]["name"])
+                print(i["body"]["args"])
                 print("is_work=>>>>",i["is_work"])
-                print(i["todo"])       
+                print(i["todo"])
+                print(i["raw_data"]) 
 
 main()

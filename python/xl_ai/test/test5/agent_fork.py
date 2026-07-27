@@ -16,7 +16,7 @@ class llm:
     def __init__(self,
                 api_key,
                 base_url,
-                modle = "deepseek-v4-flash"
+                modle
                 ):
         self.modle = modle
         self._client = OpenAI(
@@ -92,6 +92,8 @@ class Todo:
         res = structs.TodoRes()
 
         todo:structs.Todo = self._todo_list[todo_id]
+        if todo.status == "done":
+            res.res = "你已经完成这个todo，请反思为什么要继续运行这个todo"
         tasks = todo.tasks
 
         if tasks == {}:
@@ -122,7 +124,7 @@ class Todo:
         """
         更新当前任务的状态，调用这个工具代表当前任务已经成功或是失败了
         更新完成后如果还有任务程序会自动给你委派新的任务
-        请总结这次任务的冠军数据和结论！然后传递给task_result
+        请总结这次任务的关键数据和结论！然后传递给task_result
 
         
         """
@@ -141,8 +143,7 @@ class Todo:
 
         if next_task_id >= len(tasks):
             work_prompt = f"""
-            你完成了这个todo，工作记录全部都已删除，
-            只会保留任务产生的关键数据和结论
+            你完成了这个todo
             请向用户报告当前的情况和任务状态
             """ 
             for i in tasks:
@@ -162,7 +163,7 @@ class Todo:
                 next_task_p = f"任务id {next_task_id+1} 任务描述 {tasks[next_task_id+1].description}"
             work_prompt = f"""
             任务{tasks[running_task_id].id} {tasks[running_task_id].status}
-            前面任务的执行痕迹以删除只保留了关键的数据和结论
+        
             之前任务产生的关键数据和结论：
             {todo.task_result}
             ====
@@ -212,7 +213,9 @@ class TestTool:
         cmd:Annotated[str,"shell执行的命令"]
         ):
         """
-        使用系统的shell执行命令
+        使用系统的shell执行命令，
+        底层实现是subprocess.run，
+        不要执行会阻塞程序的命令
         """
         import subprocess
         res = subprocess.run(
@@ -416,15 +419,16 @@ class MessageManager:
     def _add_work_msg(self,res,role):
         self._function_map[role](res,x=self._work_message)
 
-        if isinstance(res,structs.TodoRes):
-            self._clear_work()
-            
-            self._work_message.append(
-                            {
-                "role":"user",
-                "content":res.work_prompt
-            }
-        )
+        if isinstance(res,structs.ToolRes):
+            # 2026/07/19 17:09: 目前来说想不到非常好的保留工作记录办法，暂时采用全部保存
+
+            if res.work_prompt:
+                self._work_message.append(
+                    {
+                        "role":"user",
+                        "content":res.work_prompt
+                    }
+                )
 
 
     def edit_prompt(self):
@@ -452,13 +456,12 @@ class Agent:
             base_url = "https://api.deepseek.com",
             modle = "deepseek-v4-flash"
         ):
-
         self.modle = modle
         self._messages = MessageManager()
         self._tools = tools
         self.default_tools = default_tools()
         self._mcp_client = xlmcp_client()
-        self._llm = llm(api_key,base_url)
+        self._llm = llm(api_key,base_url,modle=modle)
         # self.clear_tools = self.default_tools.clear_tools
 
     def _call_tool(self,tool_calls,is_work):
@@ -471,16 +474,20 @@ class Agent:
             args = tool.function.arguments
             args = json.loads(args)
             is_clean = False
+            
 
-
-            if tool_name in self.default_tools.ctools:
-                res = self.default_tools.tool_call(tool_name,args)
-            else:
-                res = self._mcp_client.tool_call(tool_name,args)      
+            try:
+                if tool_name in self.default_tools.ctools:
+                    res = self.default_tools.tool_call(tool_name,args)
+                else:
+                    res = self._mcp_client.tool_call(tool_name,args)      
+            except Exception as e:
+                res = e
 
             if isinstance(res,structs.Todo):
                 is_work = True
                 r.todo = res
+                res = "ok"
 
             # if tool_name in self.default_tools.clear_tools:
             #     is_clean = True
@@ -545,7 +552,7 @@ class Agent:
                         "msg":j.choices[0].message.content,
                         "think":j.choices[0].message.reasoning_content
                     },
-                    # "raw_data":
+                    "raw_data":j
                 }
             else:
                 yield{
@@ -558,7 +565,7 @@ class Agent:
                     },
                     "is_work":j.is_work,
                     "todo":j.todo,
-                    # "raw_data":j
+                    "raw_data":j
                 }
 
 
