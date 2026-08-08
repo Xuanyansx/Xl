@@ -28,7 +28,7 @@ class Todo:
     tasks:Dict[str,Task] = field(default_factory=dict)
     status:str = "undone"    #undone/done
 
-    task_result = []
+    task_result: list = field(default_factory=list)
     running_task_id:int = field(default=0, init=False)
     _last_id:int = field(default=0, init=False)
 
@@ -50,6 +50,7 @@ class ToolRes(DebugMixin):
         self.tool_id = None
         self.is_clean = None
         self.is_work = None
+
 
 class TodoRes(DebugMixin):
     def __init__(self):

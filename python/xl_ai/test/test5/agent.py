@@ -19,7 +19,7 @@ class llm:
                 message,
                 modle = "deepseek-v4-flash"
                 ):
-        self.modle = modle
+        self._modle = modle
         self._message = message
         self._client = OpenAI(
             api_key=api_key,
@@ -29,12 +29,10 @@ class llm:
     def chat(self,tools,msg,is_user = False):
         client = self._client
         res = client.chat.completions.create(
-            model=self.modle,
+            model=self._modle,
             tools=tools,
             messages=msg
         )
-        if is_user:
-            self._message.clear()
         return res   
 
 
@@ -458,7 +456,7 @@ class FrontendAgent:
         
         # return res,tres
 if __name__ == "__main__":
-    t = default_tools()
+    # t = default_tools()
     ...
 
 
