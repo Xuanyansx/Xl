@@ -632,6 +632,9 @@ class Agent:
                 }
             else:
                 # j = st.ToolRes
+                todo = None
+                if isinstance(j.res,st.TodoRes) and j.res.todo:
+                    todo = j.res.todo
                 yield{
                     "type":"tool",
                     "body":{
@@ -642,6 +645,7 @@ class Agent:
                     },
                     "prompt":j.prompt,
                     "is_work":j.work_enable,
+                    "todo":todo,
                     "raw_data":j
                 }
 

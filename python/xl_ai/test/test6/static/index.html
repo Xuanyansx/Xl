@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xl_AI · test6</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171a23;
+    --panel2: #1c202c;
+    --border: #262b3a;
+    --text: #e6e9f2;
+    --muted: #8b93a7;
+    --accent: #8b7cff;
+    --green: #4ade80;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --gray: #94a3b8;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex;
+  }
+
+  /* ---------- 主聊天区 ---------- */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header .title { font-weight: 700; font-size: 15px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  #status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  #status .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gray);
+  }
+  #status.busy .dot {
+    background: var(--blue);
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  #msgs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .msg { display: flex; flex-direction: column; max-width: 100%; }
+  .msg.user { align-items: flex-end; }
+  .msg.bot { align-items: flex-start; }
+
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    line-height: 1.65;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.user .bubble {
+    background: var(--accent);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot .bubble {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.bot .bubble.md { white-space: normal; }
+  .msg.bot .bubble.md h1, .msg.bot .bubble.md h2,
+  .msg.bot .bubble.md h3, .msg.bot .bubble.md h4 {
+    margin: 12px 0 6px;
+    line-height: 1.3;
+  }
+  .msg.bot .bubble.md h1 { font-size: 19px; }
+  .msg.bot .bubble.md h2 { font-size: 17px; }
+  .msg.bot .bubble.md h3 { font-size: 15px; }
+  .msg.bot .bubble.md h4 { font-size: 14px; }
+  .msg.bot .bubble.md p { margin: 6px 0; }
+  .msg.bot .bubble.md ul, .msg.bot .bubble.md ol {
+    margin: 6px 0;
+    padding-left: 22px;
+  }
+  .msg.bot .bubble.md li { margin: 3px 0; }
+  .msg.bot .bubble.md code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(255,255,255,.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .msg.bot .bubble.md pre {
+    background: #12141c;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    overflow: auto;
+    margin: 8px 0;
+  }
+  .msg.bot .bubble.md pre code {
+    background: none;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .msg.bot .bubble.md blockquote {
+    margin: 8px 0;
+    padding: 4px 12px;
+    border-left: 3px solid var(--accent);
+    color: var(--muted);
+  }
+  .msg.bot .bubble.md a { color: var(--accent); }
+  .msg.bot .bubble.md table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+  .msg.bot .bubble.md th, .msg.bot .bubble.md td {
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    text-align: left;
+  }
+  .msg.bot .bubble.md th { background: var(--panel); }
+  .msg.bot .bubble.md hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .msg.bot .think {
+    margin-top: 6px;
+    width: 78%;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: rgba(255,255,255,.02);
+    overflow: hidden;
+  }
+  .msg.bot .think summary {
+    cursor: pointer;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-size: 12px;
+    user-select: none;
+  }
+  .msg.bot .think pre {
+    padding: 8px 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border-top: 1px dashed var(--border);
+    max-height: 260px;
+    overflow: auto;
+  }
+
+  .tcard {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 8px;
+    background: var(--panel);
+    max-width: 86%;
+    overflow: hidden;
+  }
+  .tcard .thead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    background: var(--panel2);
+  }
+  .tcard .thead .name { font-family: var(--mono); font-weight: 600; color: var(--blue); }
+  .tcard .thead .time { margin-left: auto; color: var(--muted); font-size: 11px; }
+  .tcard .tmeta { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .tcard details {
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .tcard details summary {
+    cursor: pointer;
+    padding: 6px 12px;
+    color: var(--muted);
+    user-select: none;
+  }
+  .tcard details pre {
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 240px;
+    overflow: auto;
+    color: var(--text);
+    border-top: 1px solid var(--border);
+  }
+  .tcard .delegate {
+    margin: 8px 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(139,124,255,.10);
+    border: 1px solid rgba(139,124,255,.35);
+    color: #c9c2ff;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tcard .work-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(96,165,250,.15);
+    color: var(--blue);
+  }
+
+  .err {
+    border: 1px solid rgba(248,113,113,.4);
+    background: rgba(248,113,113,.08);
+    color: var(--red);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    white-space: pre-wrap;
+  }
+  .typing {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 4px 8px;
+  }
+  .typing::after { content: ""; animation: dots 1.4s infinite; }
+  @keyframes dots {
+    0%   { content: ""; }
+    25%  { content: "."; }
+    50%  { content: ".."; }
+    75%  { content: "..."; }
+  }
+
+  /* ---------- 输入区 ---------- */
+  #composer {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+  #composer textarea {
+    flex: 1;
+    resize: none;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.5;
+    max-height: 140px;
+    outline: none;
+  }
+  #composer textarea:focus { border-color: var(--accent); }
+  #composer button {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #composer button:disabled { opacity: .45; cursor: not-allowed; }
+  #hint { color: var(--muted); font-size: 11px; padding: 0 20px 10px; }
+
+  /* ---------- Todo 侧栏 ---------- */
+  #todoPanel {
+    width: 330px;
+    border-left: 1px solid var(--border);
+    background: var(--panel);
+    overflow-y: auto;
+    padding: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #todoPanel.show { display: flex; }
+  .todo-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .todo-head .tt { font-weight: 700; font-size: 14px; }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--gray);
+    color: #111;
+  }
+  .badge.runing { background: var(--blue); }
+  .badge.done { background: var(--green); }
+  .badge.undone { background: var(--gray); }
+  .todo-desc { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress .track {
+    flex: 1;
+    height: 8px;
+    background: var(--panel2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress .bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--blue));
+    border-radius: 4px;
+    transition: width .3s;
+  }
+  .progress .pct { font-size: 12px; color: var(--muted); }
+  #todoTasks { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  #todoTasks li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel2);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  #todoTasks li.current { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+  #todoTasks li .icon { font-family: var(--mono); }
+  #todoTasks li .t { flex: 1; }
+  #todoTasks li .c { color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
+  #todoTasks li.done .t { color: var(--muted); text-decoration: line-through; }
+  #todoNotes h4, #todoTasksTitle { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  #todoNotes {
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #todoNotes .note {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+  <div id="main">
+    <header>
+      <span class="title">Xl_AI</span>
+      <span class="sub">test6 · web 前端</span>
+      <span id="status"><span class="dot"></span><span id="statusText">空闲</span></span>
+    </header>
+    <div id="msgs"></div>
+    <div id="hint">Enter 发送 · Shift+Enter 换行</div>
+    <div id="composer">
+      <textarea id="input" rows="1" placeholder="和它说点什么…"></textarea>
+      <button id="send">发送</button>
+    </div>
+  </div>
+
+  <aside id="todoPanel">
+    <div class="todo-head">
+      <span>📋</span>
+      <span class="tt" id="todoTitle"></span>
+      <span class="badge" id="todoBadge"></span>
+    </div>
+    <div class="todo-desc" id="todoDesc"></div>
+    <div class="progress">
+      <div class="track"><div class="bar" id="todoBar"></div></div>
+      <span class="pct" id="todoPct"></span>
+    </div>
+    <div>
+      <div id="todoTasksTitle">任务</div>
+      <ul id="todoTasks"></ul>
+    </div>
+    <div>
+      <h4>任务记录</h4>
+      <div id="todoNotes"></div>
+    </div>
+  </aside>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const msgs = $("msgs");
+const input = $("input");
+const sendBtn = $("send");
+let streaming = false;
+
+const TASK_ICON = { done: "✓", failed: "✗", runing: "▶", pending: "○" };
+const TASK_LABEL = { done: "已完成", failed: "失败", runing: "执行中", pending: "待办" };
+const TODO_LABEL = { done: "已完成", runing: "执行中", undone: "未开始" };
+
+function md2html(text) {
+  // marked / DOMPurify 都加载成功才用 HTML 渲染，否则退回纯文本
+  if (typeof marked === "undefined" || typeof DOMPurify === "undefined") return null;
+  const raw = marked.parse(text, { breaks: true, gfm: true });
+  return DOMPurify.sanitize(raw);
+}
+
+function scrollBottom() {
+  const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 120;
+  if (nearBottom) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function addMsg(cls) {
+  const wrap = el("div", "msg " + cls);
+  msgs.appendChild(wrap);
+  scrollBottom();
+  return wrap;
+}
+
+function addUser(text) {
+  const wrap = addMsg("user");
+  wrap.appendChild(el("div", "bubble", text));
+}
+
+function addBot(content, think) {
+  const hasContent = content && content.trim();
+  const hasThink = think && think.trim();
+  if (!hasContent && !hasThink) return;
+  const wrap = addMsg("bot");
+  if (hasContent) {
+    const bubble = el("div", "bubble md");
+    const html = md2html(content);
+    if (html) bubble.innerHTML = html;
+    else bubble.textContent = content;
+    wrap.appendChild(bubble);
+  }
+  if (hasThink) {
+    const det = el("details", "think");
+    det.appendChild(el("summary", null, "💭 思考"));
+    det.appendChild(el("pre", null, think));
+    wrap.appendChild(det);
+  }
+}
+
+function addTool(ev) {
+  const wrap = addMsg("bot");
+  const card = el("div", "tcard");
+
+  const head = el("div", "thead");
+  head.appendChild(el("span", "name", "⚙ " + ev.name));
+  if (ev.is_work) head.appendChild(el("span", "work-tag", "work"));
+  if (ev.time) head.appendChild(el("span", "time", ev.time));
+  card.appendChild(head);
+
+  const meta = el("div", "tmeta");
+  if (ev.prompt) meta.appendChild(el("div", "delegate", "→ " + ev.prompt));
+
+  const argsTxt = JSON.stringify(ev.args ?? {}, null, 2);
+  const argsDet = el("details");
+  argsDet.appendChild(el("summary", null, "参数"));
+  argsDet.appendChild(el("pre", null, argsTxt));
+  meta.appendChild(argsDet);
+
+  const resDet = el("details");
+  resDet.open = true;
+  resDet.appendChild(el("summary", null, "结果"));
+  resDet.appendChild(el("pre", null, ev.res ?? "(空)"));
+  meta.appendChild(resDet);
+
+  card.appendChild(meta);
+  wrap.appendChild(card);
+}
+
+function addError(msg) {
+  const wrap = addMsg("bot");
+  wrap.appendChild(el("div", "err", "⚠ " + msg));
+}
+
+function setStatus(text, busy) {
+  $("statusText").textContent = text;
+  $("status").classList.toggle("busy", !!busy);
+}
+
+/* ---------- Todo 渲染 ---------- */
+function renderTodo(todo) {
+  const panel = $("todoPanel");
+  panel.classList.add("show");
+  $("todoTitle").textContent = todo.title || ("#" + todo.id);
+  const badge = $("todoBadge");
+  badge.textContent = TODO_LABEL[todo.status] || todo.status;
+  badge.className = "badge " + (todo.status || "undone");
+  $("todoDesc").textContent = todo.description || "";
+
+  const total = todo.tasks.length;
+  const done = todo.tasks.filter(t => t.status === "done").length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  $("todoBar").style.width = pct + "%";
+  $("todoPct").textContent = done + "/" + total;
+
+  const ul = $("todoTasks");
+  ul.innerHTML = "";
+  todo.tasks.forEach(t => {
+    const li = el("li", t.status);
+    if (t.id === todo.running_id && todo.status === "runing") li.classList.add("current");
+    li.appendChild(el("span", "icon", TASK_ICON[t.status] || "○"));
+    const box = el("div", "t");
+    box.appendChild(document.createTextNode(t.title));
+    box.appendChild(el("span", "c", t.content));
+    li.appendChild(box);
+    ul.appendChild(li);
+  });
+
+  const notes = $("todoNotes");
+  notes.innerHTML = "";
+  (todo.notes || []).forEach(n => notes.appendChild(el("div", "note", n)));
+}
+
+/* ---------- 流式请求 ---------- */
+async function sendMessage(text) {
+  streaming = true;
+  sendBtn.disabled = true;
+  input.disabled = true;
+  addUser(text);
+  setStatus("思考中…", true);
+  const typing = el("div", "typing", "它正在想");
+  msgs.appendChild(typing);
+  scrollBottom();
+
+  try {
+    const resp = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let gotEvent = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (!line) continue;
+        const ev = JSON.parse(line);
+        if (typing.parentNode) typing.remove();
+        if (!gotEvent) setStatus("执行中…", true);
+        gotEvent = true;
+        handleEvent(ev);
+      }
+    }
+  } catch (e) {
+    if (typing.parentNode) typing.remove();
+    addError(String(e));
+  } finally {
+    streaming = false;
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.focus();
+    setStatus("空闲", false);
+  }
+}
+
+function handleEvent(ev) {
+  switch (ev.type) {
+    case "user":
+      break;
+    case "bot":
+      addBot(ev.content, ev.think);
+      break;
+    case "tool":
+      addTool(ev);
+      setStatus("工具: " + ev.name, true);
+      break;
+    case "todo":
+      renderTodo(ev.todo);
+      break;
+    case "error":
+      addError(ev.message);
+      break;
+    case "done":
+      break;
+  }
+  scrollBottom();
+}
+
+/* ---------- 交互 ---------- */
+sendBtn.addEventListener("click", () => {
+  const text = input.value.trim();
+  if (!text || streaming) return;
+  input.value = "";
+  input.style.height = "auto";
+  sendMessage(text);
+});
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+
+input.addEventListener("input", () => {
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 140) + "px";
+});
+
+input.focus();
+</script>
+</body>
+</html>
