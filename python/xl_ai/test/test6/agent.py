@@ -539,11 +539,17 @@ class MessageManager:
             self._turn = st.Turn(msg)
             # self._turns.append(self._turn)
         else:
+            # for m,f in msg:
+            #     if self._work_enable:
+            #         self._turn.work_push(m,f)
+            #     else:
+            #         self._turn.push(m,f)
             for m,f in msg:
-                if self._work_enable:
-                    self._turn.work_push(m,f)
-                else:
-                    self._turn.push(m,f)
+                self._turn.push(
+                    m,
+                    f,
+                    self._work_enable,
+                )
         self._turn.usage = usage
 
 
@@ -604,7 +610,7 @@ class MessageManager:
         if self._work_enable:
             msg = "你是不是还有任务没有提交状态/没有完成？"
 
-            self._turn.push({
+            self._turn._push({
                 "role":"user",
                 "content":msg,
                 "name":"[系统]"     

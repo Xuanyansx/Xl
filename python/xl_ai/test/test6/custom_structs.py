@@ -1,6 +1,8 @@
 # from typing import Dict
+from itertools import pairwise
 from pydantic import BaseModel, Field
 from dataclasses import dataclass, field
+
 
 
 class DebugMixin:
@@ -18,7 +20,7 @@ class BaseMsgBlock:
         self._last_index = 0
         self._cursor = 0
 
-    def push(self,msg,flag=False):
+    def _push(self,msg,flag=False):
         self._message.append(msg)
 
         if flag:
@@ -168,6 +170,7 @@ class Message:
 @dataclass
 class Work(BaseMsgBlock):
     index: int = 0
+    i : int = 0
 
     def __post_init__(self):
         super().__init__()
@@ -178,6 +181,7 @@ class Work(BaseMsgBlock):
 @dataclass
 class Turn(DebugMixin,BaseMsgBlock):
     user_msg: str
+    _work = None
     _usage: int = 0
 
     # a = [1,2,3,4,5,9,10,20,24,26,28,30]
@@ -193,7 +197,7 @@ class Turn(DebugMixin,BaseMsgBlock):
 
     def __post_init__(self):
         super().__init__()
-        self.work = Work()
+        self.works : list[Work]= []
 
     @property
     def usage(self):
@@ -205,42 +209,91 @@ class Turn(DebugMixin,BaseMsgBlock):
 
     #  2026/08/26 11:17:  艹了，设计上没有考虑多work，现在好了（
 
-    @property
-    def insert_messages(self):
-        # res = []
-        # for i in self.works:
-        #     res+=i._insert_msg
-        return self._insert_msg+self.work._insert_msg
 
-    def edit_insert_msg(self, i, msg):
-        
-        if i >= len(self._insert_msg):
-            self.work._edit_insert_msg(
-                i-len(self._insert_msg),
-                msg
-            )
+    def push(self,msg,flag=False,work_enable=False):
+
+        if work_enable:
+            if self._work == None:
+                self._work = Work()
+            self._work_push(msg,flag)
             return
-
-        self._edit_insert_msg(i,msg)
+        
+        if self._work:
+            self.works.append(self._work)
+            self._work = None
+        self._push(msg,flag)
 
             
+    def _work_push(self,msg,flag=False):
+        if not self._work.index:
+            self._work.index = self._cursor
+
+        self._work._push(msg,flag)
+
+
+
+    @property
+    def insert_messages(self):
+        res = []
+        for i in self.works+([self._work] if self._work else []):
+            res+=i._insert_msg
+        return self._insert_msg+res
+
+    def edit_insert_msg(self, i, msg):
+        l = 0
+        L = [self]+self.works+([self._work] if self._work else [])
+        # if i < L:
+        #     self._edit_insert_msg(i,msg)
+        #     return
+        
+        for wi,w in enumerate(L):
+
+            if i<l+len(w._insert_msg):
+                L[wi]._edit_insert_msg(
+                    i-l,
+                    msg
+                )
+                return
+            l+=len(w._insert_msg)
+
+        #  2026/08/27 01:10: 写这个edit类似我了（aidebug真好用，嘿嘿），
+        # 不过好在现在彻底完成了多work的兼容了
+
+
+
+
+        
+    #     if i >= len(self._insert_msg):
+    #         self.work._edit_insert_msg(
+    #             i-len(self._insert_msg),
+    #             msg
+    #         )
+    #         return
+
+    #     self._edit_insert_msg(i,msg)
+
         # [0,1,2,3,4,5,6][0,1,2, 3, 4]
         # [0,1,2,3,4,5,6, 7,8,9,10,11]
 
 
-
-
-    def work_push(self,msg,flag=False):
-        if not self.work.index:
-            self.work.index = self._cursor
-
-        self.work.push(msg,flag)
-
     @property
     def message(self):
         res = self._message.copy()
-        wi = self.work.index
-        res[wi:wi] = self.work._message
+        if self._work:
+
+            wi = self._work.index
+            res[wi:wi] = self._work._message
+
+        for i in reversed(self.works):
+            wi = i.index
+            res[wi:wi] = i._message
+                
+
+        # [0,1,2,3,4,5,6,7]
+        # [1,2,3,4,5] 4:4
+        # [1,2,3,4] 6:6
+        # [0,1,2,3,+1,2,3,4,5+,4,5,6,7]
+
         return [self.user_msg]+res
 
 
