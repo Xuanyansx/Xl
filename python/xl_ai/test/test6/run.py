@@ -6,15 +6,15 @@ import xl_config.config as c
 
 
 
-class mcp:
+class Mcp:
     tools = []
     failed_tools = []
 
-class skill:
+class Skill:
     skill_index = []
 
-class soul:
-    ...
+class Soul:
+    soul = ""
 
 def main():
     Config = c.Config
@@ -36,14 +36,16 @@ def main():
         max_active_turn,
         max_turn,
         gc_turn,
-        []
+
     )
 
-    llm.tools = mcp.tools
-    llm.skill = skill.skill_index
-    llm.soul = soul
 
     while True:
+        llm.tools = Mcp.tools
+        llm.skills = Skill.skill_index
+        llm.soul = Soul.soul
+        
+        
         user = prompt_toolkit.prompt("[Xl_AI]< ")
         for i in llm.send(user):
             print("[Xl_AI]>")

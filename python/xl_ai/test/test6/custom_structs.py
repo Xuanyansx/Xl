@@ -9,42 +9,56 @@ class DebugMixin:
 
 class BaseMsgBlock:
     def __init__(self):
-        self.insert_index = []
-        self.insert_msg = []
+        self._insert_index = []
+        self._insert_msg = []
+        # [[],[],[]]
 
+        self._message = []
         self._normal_msg = []
         self._last_index = 0
         self._cursor = 0
 
     def push(self,msg,flag=False):
+        self._message.append(msg)
+
         if flag:
             if not self._cursor:
                 self._cursor = len(self._normal_msg)
             self._append_insert(self._cursor,msg)
         else:
             self._normal_msg.append(msg)
+
         self._cursor+=1   
+
+
+    def _build_message(self):
+        res = self._normal_msg.copy()
+        for i,j in enumerate(self._insert_index):
+            res[j:j] = self._insert_msg[i]
+
+        return res
             
     def _append_insert(self, i, v):
         v = [v]
-        if i - self._last_index == 1:
-            self.insert_msg[-1] += v
+        if self._insert_msg and i - self._last_index == 1:
+            self._insert_msg[-1] += v
         else:
-            self.insert_index.append(i)
-            self.insert_msg.append(v)
-            self.last_index = i
+            self._insert_index.append(i)
+            self._insert_msg.append(v)
+        self._last_index = i
 
-    @property
-    def message(self):
-        res = self._normal_msg.copy()
-        for i,j in enumerate(self.insert_index):
-            res[j:j] = self.insert_msg[i]
 
-        return res
+
+    def _edit_insert_msg(self,i,msg):
+        self._insert_msg[i] = [msg]
+        self._message = self._build_message()
+    #  2026/08/22 23:25: 简单重构了下逻辑，这样每次获取消息就不用重新拼装了
+    #  实话说我早就看这个不爽了，完成前面的任务后也是把这个不爽点修了
+
 
 @dataclass
 class PromptClass:
-    prompt: str = None 
+    prompt: str = ""
 
 
 
@@ -102,7 +116,7 @@ class ToolRes(DebugMixin):
     tool_name: str = None
     args: object = None
     tool_id: str = None
-    prompt:str = None
+    prompt:str = ""
     work_enable:object = None
     is_last: bool = False
     is_clear: bool = False
@@ -138,6 +152,7 @@ class TodoRes(DebugMixin,PromptClass):
 
 @dataclass
 class Message:
+    usage:int
     message: object
     role: str = "user"
     prompt: object = None
@@ -163,6 +178,7 @@ class Work(BaseMsgBlock):
 @dataclass
 class Turn(DebugMixin,BaseMsgBlock):
     user_msg: str
+    _usage: int = 0
 
     # a = [1,2,3,4,5,9,10,20,24,26,28,30]
     # b = [5,10,20,24,26,28]
@@ -174,22 +190,60 @@ class Turn(DebugMixin,BaseMsgBlock):
     #         [27],
     #         [29]
     #     ]
+
     def __post_init__(self):
         super().__init__()
-        self._work = Work()
+        self.work = Work()
+
+    @property
+    def usage(self):
+        return self._usage
+
+    @usage.setter
+    def usage(self,v):
+        self._usage+=v
+
+    #  2026/08/26 11:17:  艹了，设计上没有考虑多work，现在好了（
+
+    @property
+    def insert_messages(self):
+        # res = []
+        # for i in self.works:
+        #     res+=i._insert_msg
+        return self._insert_msg+self.work._insert_msg
+
+    def edit_insert_msg(self, i, msg):
+        
+        if i >= len(self._insert_msg):
+            self.work._edit_insert_msg(
+                i-len(self._insert_msg),
+                msg
+            )
+            return
+
+        self._edit_insert_msg(i,msg)
+
+            
+        # [0,1,2,3,4,5,6][0,1,2, 3, 4]
+        # [0,1,2,3,4,5,6, 7,8,9,10,11]
+
+
+
 
     def work_push(self,msg,flag=False):
-        if not self._work.index:
-            self._work.index = self._cursor
+        if not self.work.index:
+            self.work.index = self._cursor
 
-        self._work.push(msg,flag)
+        self.work.push(msg,flag)
 
     @property
     def message(self):
-        res = super().message
-        wi = self._work.index
-        res[wi:wi] = self._work.message
+        res = self._message.copy()
+        wi = self.work.index
+        res[wi:wi] = self.work._message
         return [self.user_msg]+res
+
+
 
 
 
@@ -210,5 +264,25 @@ class TodoError(Exception):
 #     todos: list[TaskItem] = Field(description="完整的 todo 列表，按执行顺序排列")
 #     model_config = {"extra": "forbid"}
 
+
+
 if __name__ == "__main__":
     print("debug")
+
+    # t = Turn("111")
+    # while True:
+    #     t.push("1111")
+    #     t.push("1111")
+    #     t.push("1111",True)
+    #     t.push("1111")
+    #     t.push("1111",True)
+    #     t.push("1111",True)
+    #     t.push("1111")
+    #     t.push("1111")
+    #     t.push("1111",True)
+    #     t.push("1111",True)
+    #     t.push("1111",True)
+    #     t.push("1111",True)
+    #     t.push("1111",True)
+
+

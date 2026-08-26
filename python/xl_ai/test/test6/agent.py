@@ -1,12 +1,13 @@
 import json
 import asyncio
 import inspect
+import tiktoken
 from openai import OpenAI
+import custom_structs as st
 from datetime import datetime
 from pydantic import BaseModel
-import custom_structs as st
+from memory.manager import Archive
 from xl_mcp.mcp_cs import xlmcp_client
-from prompt_toolkit import PromptSession
 from typing import Annotated,Literal,get_type_hints
 
 
@@ -16,7 +17,7 @@ class LLM:
     def __init__(self,
                 api_key,
                 base_url,
-                modle = "deepseek-v4-flash"
+                modle
                 ):
         self.modle = modle
         self._client = OpenAI(
@@ -32,7 +33,46 @@ class LLM:
             messages=msg
         )
         # print(msg)
-        return res   
+        return res
+
+    @staticmethod
+    def count_tokens(text, encoding_name = "cl100k_base"):
+        encoding = tiktoken.get_encoding(encoding_name)
+        return len(encoding.encode(text))
+
+    @staticmethod
+    def get_time():
+        return datetime.now().strftime("%Y/%m/%d %H:%M")
+
+
+    def summarize(self, transcript, previous_summary=None, target_tokens=500):
+        #  2026/08/21 02:48:懒得写这个函数了，让ai写的
+        anchor = (
+            f"<previous-summary>\n{previous_summary}\n</previous-summary>\n"
+            if previous_summary
+            else ""
+        )
+        prompt = f"""把下面这段对话历史浓缩成一份摘要，这份摘要将替代这些消息继续参与后续对话。
+
+            要求：
+            - 按时间顺序提炼：做了什么、得到什么结果、做了什么决策、还有什么没完成
+            - 保留确切的文件路径、工具名、标识符、数值
+            - 用旁观者视角写，不要提"总结/压缩"这件事
+            - 用要点式，控制在 {target_tokens} token 以内
+
+            {anchor}<conversation>
+            {transcript}
+            </conversation>"""
+
+
+        res = self.chat(
+            [],
+            [{"role": "user", "content": prompt}]
+        )
+        text = (res.choices[0].message.content or "").strip()
+        return text or "[历史已归档]"
+
+
 
 
 
@@ -59,7 +99,7 @@ class Todo:
         
         """
         todo_id = len(self.todos)
-        ctime = datetime.now().strftime("%Y/%m/%d %H:%M")
+        ctime = LLM.get_time()
         self.todos.append(
             st.Todo(
                 todo_id,
@@ -231,16 +271,7 @@ class Todo:
         )
         return res
         
-            
-
-            
-
-
-
-  
-
-
-
+    
     
 
 class TestTool:
@@ -388,6 +419,56 @@ class DefaultTools:
     #     ...
 
 
+class GC:
+    def __init__(
+            self,
+            max_token,
+            max_active_turn,
+            max_turn,
+            ):
+
+        self.max_token = max_token
+        self.max_active_turn = max_active_turn
+        self.max_turn = max_turn
+        self.turns = []
+
+    def gc(self,turn:st.Turn):
+
+        
+
+        archive = Archive()
+        
+        # for i,msg in enumerate(turn._insert_msg):
+        #     turn._edit_insert_msg(
+        #         i,
+        #         f"{msg[:100]},内容已被归档，归档id{archive.lid}，详细内容请使用工具请使用get_archive来查看"
+        #     )
+        #     archive.add_archive(msg)
+
+        # for i,msg in enumerate(turn.work._insert_msg):
+        #     turn._edit_insert_msg(
+        #         i,
+        #         f"{msg[:100]},内容已被归档，归档id{archive.lid}，详细内容请使用工具请使用get_archive来查看"
+        #     )
+        #     archive.add_archive(msg)
+        #  2026/08/21 04:52: 冗余就冗余吧，我现在已经神智不清了（（（，之后在优化吧
+
+        for i,msg in enumerate(turn.insert_messages):
+            turn.edit_insert_msg(
+                i,
+                f"{msg[:100]},内容已被归档，归档id{archive.lid}，详细内容请使用工具请使用get_archive来查看"
+            )
+            archive.add_archive(msg)
+
+        if turn.usage>self.max_token:
+            msg = f""
+
+            for i in turn.message:
+                ...
+                
+
+
+
 
 class MessageManager:
     def __init__(
@@ -406,7 +487,7 @@ class MessageManager:
             self._prompt = "你需要装作一个真实的人类，但你不必刻意扮演其他人，请做好记忆中的自己就好了"
         self._soul = soul
 
-        self._turns = []
+        # self._turns = []
         self._sub_prompts = []
         self._turn = None
         self._messages = []
@@ -414,9 +495,7 @@ class MessageManager:
 
         # self._turn = []
 
-        self.max_token = max_token
-        self.max_active_turn = max_active_turn
-        self.max_turn = max_turn
+        self._GC = GC(max_token,max_active_turn,max_token)
 
         self._work_enable = None
 
@@ -425,8 +504,10 @@ class MessageManager:
             "assistant":self._add_bot_msg,
             "tool":self._add_tool_msg
         }
-        
-    def build_messages(self):
+
+
+    @property
+    def messagess(self):
         prompt = [{
             "role":"system",
             "content":f"""
@@ -436,14 +517,16 @@ class MessageManager:
 
             """
         }]
-        return self._messages+prompt+self._turn.message
+
+        return prompt+self._messages+self._turn.message
 
 
 
     def push(self,message:st.Message):
         # 关于有些地方注释属性和有些地方没有注释，其实这是为了方便我补全，并不是规范（（（汗 2026/07/30 17:51:
   
-        msg = message.message 
+        msg = message.message
+        usage = message.usage
         role = message.role
         # prompt = message.prompt
 
@@ -452,28 +535,31 @@ class MessageManager:
 
         msg = self._func_menu[role](role,msg)
         if role == "user":
-            if self._turn:
-                self.gc()
 
             self._turn = st.Turn(msg)
-            self._turns.append(self._turn)
+            # self._turns.append(self._turn)
         else:
             for m,f in msg:
                 if self._work_enable:
                     self._turn.work_push(m,f)
                 else:
                     self._turn.push(m,f)
+        self._turn.usage = usage
 
 
-        
-        
         
 
     # def _build_turn(self):
     #     ...
 
-    def _add_user_msg(self,role,msg):
-        return {"role":role,"content":msg}
+    def _add_user_msg(self,role,msg,name=None):
+        res = {
+            "role":role,
+            "content":f"{msg} time:{LLM.get_time()}"
+            }
+        if name:
+            res["name"] = name
+        return res
 
     def _add_bot_msg(self,role,msg):
         return [(msg,False)]
@@ -484,7 +570,7 @@ class MessageManager:
                     {
                     "role":role,
                     "tool_call_id":msg.tool_id,
-                    "content":f"{msg.res}"
+                    "content":f"{msg.res}",
                     },
                     msg.is_clear
                 )
@@ -513,9 +599,26 @@ class MessageManager:
     #     return [()]
     #     ...
 
-    
-    def gc(self):
-        self._messages+=self._turn.message
+    def finish_round(self):
+        # msg = ""
+        if self._work_enable:
+            msg = "你是不是还有任务没有提交状态/没有完成？"
+
+            self._turn.push({
+                "role":"user",
+                "content":msg,
+                "name":"[系统]"     
+            },False)
+            return False
+        
+
+        # self._messages = self._GC.gc(self._turn)
+
+        return True
+
+
+
+        
 
 
 
@@ -528,27 +631,34 @@ class Agent:
             max_token,
             max_active_turn,
             max_turn,
-            gc_turn,
-            tools
+            gc_turn
             # tools = [],
 
         ):
 
         self.modle = modle
-        self._messages = MessageManager(
+        self._message_m = MessageManager(
             max_token,
             max_active_turn,
             max_turn,
             gc_turn
         )
 
-        self.soul = ""
-        self.skill = []
-        self.tools = tools
+        self._soul = ""
+        self.skills = []
+        self.tools = []
         self.default_tools = DefaultTools()
         self._mcp_client = xlmcp_client()
-        self._llm = LLM(api_key,base_url)
+        self._llm = LLM(api_key,base_url,modle)
         # self.clear_tools = self.default_tools.clear_tools
+
+    @property
+    def soul(self):
+        return self._soul
+
+    @soul.setter
+    def soul(self,v):
+        ...
 
     def _call_tool(self,tool_calls):
         n = len(tool_calls)-1
@@ -580,20 +690,24 @@ class Agent:
     def _loop(self,user_msg):
         tools = self.default_tools.tools+self.tools
 
-        self._messages.push(
+        self._message_m.push(
             st.Message(
+                self._llm.count_tokens(user_msg),
                 user_msg
             )
         )
-
+        
         while True:
             reply = self._llm.chat(
                 tools,
-                self._messages.build_messages()
+                self._message_m.messagess
             )
             reply_content = reply.choices[0].message
-            self._messages.push(
+            self._message_m.push(
                 st.Message(
+                    self._llm.count_tokens(
+                        reply_content.content
+                    ),
                     reply_content,
                     "assistant"
                 )
@@ -602,17 +716,23 @@ class Agent:
             tool_calls = reply_content.tool_calls
 
             if not tool_calls:
-                break
+                flag = self._message_m.finish_round()
+                if flag:
+                    break
+                continue
+
 
             gen = self._call_tool(tool_calls)
             for i in gen:
-                self._messages.push(
+                self._message_m.push(
                     st.Message(
+                        self._llm.count_tokens(f"{i.res}"+i.prompt),
                         i,
                         "tool"
                     )
                 )
                 yield "tool",i
+
         # 这解耦合不就成了吗  2026/08/02 14:58:
 
 

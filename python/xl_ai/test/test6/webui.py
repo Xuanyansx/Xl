@@ -48,7 +48,6 @@ def get_agent():
             C["max_active_turn"],
             C["max_turn"],
             C["gc_turn"],
-            [],
         )
     return _agent
 
