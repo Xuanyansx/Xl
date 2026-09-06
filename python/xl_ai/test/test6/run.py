@@ -25,7 +25,7 @@ def main():
     max_token = Config["max_token"]
     max_turn = Config["max_turn"]
     max_active_turn = Config["max_active_turn"]
-    gc_turn = Config["gc_turn"]
+    work_TTL = Config["work_TTL"]
     # momory_path = Config["momory_path"]
 
     llm = agent.Agent(
@@ -35,7 +35,7 @@ def main():
         max_token,
         max_active_turn,
         max_turn,
-        gc_turn,
+        work_TTL,
 
     )
 

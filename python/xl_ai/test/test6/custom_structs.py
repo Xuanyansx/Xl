@@ -2,6 +2,7 @@
 from itertools import pairwise
 from pydantic import BaseModel, Field
 from dataclasses import dataclass, field
+from xl_lib import format_message
 
 
 
@@ -13,24 +14,32 @@ class BaseMsgBlock:
     def __init__(self):
         self._insert_index = []
         self._insert_msg = []
+        self._formatted_text = ""
+        self.flag = 0 # 标识被压缩
         # [[],[],[]]
 
-        self._message = []
+        self._inner_messages = []
         self._normal_msg = []
         self._last_index = 0
         self._cursor = 0
+        self.msg_changed = 0 #列表发生变化就为1  2026/08/29 01:00:
+        
 
-    def _push(self,msg,flag=False):
-        self._message.append(msg)
+        
+    def _push(self,message):
+        for msg,flag in message:
 
-        if flag:
-            if not self._cursor:
-                self._cursor = len(self._normal_msg)
-            self._append_insert(self._cursor,msg)
-        else:
-            self._normal_msg.append(msg)
+            self._inner_messages.append(msg)
+            self._formatted_text += format_message(msg)
+            
+            if flag:
+                if not self._cursor:
+                    self._cursor = len(self._normal_msg)
+                self._append_insert(self._cursor,msg)
+            else:
+                self._normal_msg.append(msg)
 
-        self._cursor+=1   
+            self._cursor+=1   
 
 
     def _build_message(self):
@@ -41,7 +50,7 @@ class BaseMsgBlock:
         return res
             
     def _append_insert(self, i, v):
-        v = [v]
+        # v = [v]
         if self._insert_msg and i - self._last_index == 1:
             self._insert_msg[-1] += v
         else:
@@ -53,10 +62,20 @@ class BaseMsgBlock:
 
     def _edit_insert_msg(self,i,msg):
         self._insert_msg[i] = [msg]
-        self._message = self._build_message()
+        # self.inner_messages = self._build_message()
+        self.msg_changed = 1
     #  2026/08/22 23:25: 简单重构了下逻辑，这样每次获取消息就不用重新拼装了
     #  实话说我早就看这个不爽了，完成前面的任务后也是把这个不爽点修了
+    
+    @property
+    def inner_messages(self):
+        # property大法,爽！property大法,爽！!property大法,爽！! ！😋 2026/08/29 01:16:
 
+        if self.msg_changed:
+            self.msg_changed = 0
+            self._inner_messages = self._build_message()
+        return self._inner_messages
+    # 补丁，每次edit就重构心里还是太别扭了 2026/08/29 01:05:
 
 @dataclass
 class PromptClass:
@@ -82,7 +101,7 @@ class Todo:
     ttitle:str
     description:str
     create_time:str
-    tasks:list = field(default_factory=list)
+    tasks:list[Task] = field(default_factory=list)
     status:str = "undone"    #undone/runing/done
     time:str = "now" #之后或许会做定时/延迟任务
 
@@ -110,6 +129,11 @@ class Todo:
         return self.tasks
 
 
+# @dataclass
+# class AssistantRes:
+#     res: object
+#     tool_calls: list = None
+
 
 @dataclass
 class ToolRes(DebugMixin):
@@ -135,13 +159,15 @@ class ToolRes(DebugMixin):
 
     @res.setter
     def res(self,value):
+        r = value
         if isinstance(value,PromptClass):
             self.prompt = value.prompt
-        self._res = value
 
         if isinstance(value,TodoRes):
             self.work_enable = value.work_enable
-
+            r = value.res
+        self._res = r
+            
     # is_clean:  = None
     # is_work: object = None
 
@@ -151,6 +177,16 @@ class TodoRes(DebugMixin,PromptClass):
     work_enable: bool = None
     todo: Todo = None
 
+
+@dataclass
+class ToolStage:
+    _l: int
+    item:list = field(default_factory=list)
+
+    def push(self,msg):
+        self.item+=msg
+        self._l-=1
+        return self.item
 
 @dataclass
 class Message:
@@ -169,12 +205,26 @@ class Message:
 
 @dataclass
 class Work(BaseMsgBlock):
-    index: int = 0
     i : int = 0
+    index: int = 0
+
+    @property
+    def formatted_text(self):
+        if self.archive_msg:
+            return 
+        return self._formatted_text
 
     def __post_init__(self):
         super().__init__()
-    ...
+        self.archive_msg = []
+
+    @property
+    def inner_messages(self):
+        if self.archive_msg:
+            return self.archive_msg
+        return super().inner_messages
+
+    
 
 
 
@@ -194,10 +244,15 @@ class Turn(DebugMixin,BaseMsgBlock):
     #         [27],
     #         [29]
     #     ]
-
+    
     def __post_init__(self):
         super().__init__()
         self.works : list[Work]= []
+        self._work_summarized_text: list = []
+        self._formatted_text += format_message(self.user_msg)
+
+    def archive_work(self,id,msg):
+        self.works[id].archive_msg = [msg]
 
     @property
     def usage(self):
@@ -210,26 +265,69 @@ class Turn(DebugMixin,BaseMsgBlock):
     #  2026/08/26 11:17:  艹了，设计上没有考虑多work，现在好了（
 
 
-    def push(self,msg,flag=False,work_enable=False):
+    # def push(self,msg,flag=False,work_enable=False):
 
+    #     if work_enable:
+    #         if self._work == None:
+    #             self._work = Work()
+    #         self._work_push(msg,flag)
+    #         return
+
+        
+    #     if self._work:
+    #         self.works.append(self._work)
+    #         self._work = None
+    #     self._push(msg,flag)
+        
+    def push(self,msg,work_enable=False):
         if work_enable:
             if self._work == None:
                 self._work = Work()
-            self._work_push(msg,flag)
+            self._work_push(msg)
             return
+
         
         if self._work:
             self.works.append(self._work)
             self._work = None
-        self._push(msg,flag)
+        self._push(msg)
+
+
 
             
-    def _work_push(self,msg,flag=False):
+    def _work_push(self,msg):
         if not self._work.index:
             self._work.index = self._cursor
 
-        self._work._push(msg,flag)
+        self._work._push(msg)
 
+    @property
+    def work_formatted_text(self):
+        return [w.formatted_text for w in self.works if w.formatted_text]
+        
+    @property
+    def formatted_text(self):
+        ...
+
+    @property
+    def message(self):
+        res = self.inner_messages.copy()
+        if self._work:
+
+            wi = self._work.index
+            res[wi:wi] = self._work.inner_messages
+
+        for i in reversed(self.works):
+            wi = i.index
+            res[wi:wi] = i.inner_messages
+
+        return [self.user_msg]+res
+
+
+        # [0,1,2,3,4,5,6,7]
+        # [1,2,3,4,5] 4:4
+        # [1,2,3,4] 6:6
+        # [0,1,2,3,+1,2,3,4,5+,4,5,6,7]
 
 
     @property
@@ -238,6 +336,7 @@ class Turn(DebugMixin,BaseMsgBlock):
         for i in self.works+([self._work] if self._work else []):
             res+=i._insert_msg
         return self._insert_msg+res
+
 
     def edit_insert_msg(self, i, msg):
         l = 0
@@ -260,6 +359,9 @@ class Turn(DebugMixin,BaseMsgBlock):
         # 不过好在现在彻底完成了多work的兼容了
 
 
+            
+
+
 
 
         
@@ -276,25 +378,6 @@ class Turn(DebugMixin,BaseMsgBlock):
         # [0,1,2,3,4,5,6, 7,8,9,10,11]
 
 
-    @property
-    def message(self):
-        res = self._message.copy()
-        if self._work:
-
-            wi = self._work.index
-            res[wi:wi] = self._work._message
-
-        for i in reversed(self.works):
-            wi = i.index
-            res[wi:wi] = i._message
-                
-
-        # [0,1,2,3,4,5,6,7]
-        # [1,2,3,4,5] 4:4
-        # [1,2,3,4] 6:6
-        # [0,1,2,3,+1,2,3,4,5+,4,5,6,7]
-
-        return [self.user_msg]+res
 
 
 

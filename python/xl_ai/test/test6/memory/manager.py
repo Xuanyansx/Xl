@@ -4,38 +4,37 @@ import json
 current_dir = Path(__file__).parent
 
 class Archive:
-    def __init__(
-            self,
-            ):
+    def __init__(self, dir=None):
+        self.dir = Path(
+            dir or current_dir
+        ) / "archive"
         
-        with open(
-            f"{current_dir}/archive/data.json",
-            encoding="utf-8",
-        ) as f:
-            self.data = json.load(f)
-        
-        self.lid = self.data["last_id"]
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.meta_path = self.dir / "data.json"
+        self._meta = json.loads(
+            self.meta_path.read_text(
+                encoding="utf-8"
+            )
+        )
+        self.lid = self._meta["last_id"]
 
-    @staticmethod
-    def get_archive(id):
-        ...
-
+    def add_archive(self, msg) -> int:
     
-    def add_archive(self,msg):
-        with open(
-            f"{current_dir}/archive/{self.lid}.md",
+        lid = self.lid
+        (self.dir / f"{lid}.md").write_text(msg, encoding="utf-8")
+        self.lid = lid + 1
+        self._save_meta()
+        return lid
+
+    def get_archive(self, id) -> str:
+        return (self.dir / f"{id}.md").read_text(encoding="utf-8")
+
+    def _save_meta(self):
+        self._meta["last_id"] = self.lid
+        self.meta_path.write_text(
+            json.dumps(self._meta, ensure_ascii=False),
             encoding="utf-8",
-            mode="w"
-            ) as f:
-            f.write(msg)
-        
-        self.data["last_id"]+=1
-        with open(
-            f"{current_dir}/archive/data.json",
-            encoding="utf-8",
-            mode="w"
-            ) as f:
-            json.dump(self.data,f)
+        )
 
 
 # a = Archive()

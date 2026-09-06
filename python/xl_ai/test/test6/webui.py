@@ -47,7 +47,7 @@ def get_agent():
             C["max_token"],
             C["max_active_turn"],
             C["max_turn"],
-            C["gc_turn"],
+            C["work_TTL"],
         )
     return _agent
 

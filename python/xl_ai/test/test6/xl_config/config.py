@@ -11,7 +11,7 @@ Config ={
     "max_token" : 700000,
     "max_active_turn" : 20,
     "max_turn" : 50,
-    "gc_turn" : 3,
+    "work_TTL" : 3, #Turn to live (doge)
     "load_tools" : []
     # "momory_path" : "/memory"
 }
