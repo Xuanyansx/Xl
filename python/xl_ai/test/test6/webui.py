@@ -75,7 +75,7 @@ def todo_to_dict(todo):
 
 def extract_todo(raw):
     """从 ToolRes 里挖 TodoRes / Todo，转成前端友好的 dict。"""
-    res = getattr(raw, "_res", None)
+    res = getattr(raw, "todo_res", None) or getattr(raw, "_res", None)
     if isinstance(res, st.TodoRes) and res.todo is not None:
         return todo_to_dict(res.todo)
     if isinstance(res, st.Todo):
@@ -115,7 +115,12 @@ def event_stream(message):
                     "prompt": ev.get("prompt") or "",
                     "is_work": ev.get("is_work"),
                 }
-                todo = extract_todo(raw)
+                # Agent.send 已尽量在事件里带 todo，这里兜底再挖一次
+                todo = ev.get("todo")
+                if todo is not None and not isinstance(todo, dict):
+                    todo = todo_to_dict(todo)
+                if todo is None:
+                    todo = extract_todo(raw)
                 if todo:
                     yield {"type": "todo", "todo": todo}
     except Exception as e:
