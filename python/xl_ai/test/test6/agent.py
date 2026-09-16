@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from memory.manager import Archive
 from xl_mcp.mcp_cs import xlmcp_client
 from typing import Annotated,Literal,get_type_hints
-import logging
+# import logging
 
 
 
@@ -34,13 +34,13 @@ class LLM:
             tools=tools,
             messages=msg
         )
-        logging.basicConfig(filename=f'msg.log', level=logging.INFO)
+        # logging.basicConfig(filename=f'msg.log', level=logging.INFO)
         formatted = ""
         for i in msg:
             formatted+=f"\n{i}"
-        logging.info(formatted)
-        logging.info(f'{"=="*20}')
-        # print(msg)
+        # logging.info(formatted)
+        # logging.info(f'{"=="*20}')
+        # # print(msg)
         return res
     @staticmethod
     def count_tokens(text, encoding_name = "cl100k_base"):
@@ -444,23 +444,25 @@ class GC:
         self.temp_llm = temp_llm
 
         # self.turns = []
-        self._out_turns:list[st.Turn] = []
-        self._out_messages = []
+        self._inactive_turns:list[st.Turn] = []
 
         self.usage = 0
         
         # window = deque()
         # self.basic_window:deque[st.Turn] = deque()
-        self.work_window:deque[st.Turn] = deque()
-        self.work_msg_window:deque[st.Turn.message] = deque()
+        self._work_window:deque[st.Turn] = deque()
+        self._active_turns_window:deque[st.Turn] = deque()
 
         self.archive = Archive()
 
-
+    
     
     @property
     def turns(self):
-        return self._out_turns+list(self.work_window)
+        return self._inactive_turns+list(self._active_turns_window)
+
+
+
 
     @property
     def message(self):
@@ -468,35 +470,40 @@ class GC:
         for i in self.turns:
             msg+=i.message
         return msg
-    
 
-    def gc(self,turn:st.Turn):
 
-        self.usage += turn.usage
+    def gc_work(self,turn):
 
-        ww = self.work_window
+        ww = self._work_window
+        
         # wmw = self.work_msg_window
         # bw = self.basic_window
 
-
         if len(ww) == self.work_TTL:
             out_turn = ww.popleft()
+            out_usage = out_turn.usage
+
             # out_msg = wmw.popleft()
             for i,msg in enumerate(out_turn.work_formatted_text):
                 if not msg:
                     continue
                 
                 lid = self.archive.add_archive(msg)
-                out_turn.archive_work(
-                    i,
+                msg = (
                     MessageManager.build_prompt_msg(
                         f"归档id{lid}",
                         "archive_role"
-                    )[0][0]
+                    )
                 )
-            self._out_turns.append(
-                out_turn
-            )
+                out_turn.archive_work(
+                    i,
+                    msg
+                )
+            out_usage-=out_turn.usage
+            self.usage -= out_usage
+
+            # return out_usage
+            
             #  2026/09/05 00:54: 我艹了，没有考虑到tool的对应关系，现在估计要大改了，不过还好耦合程度不高
             
             #  2026/09/03 18:29: 好的东西思路都乱了，算了先把理论功能实现，等下个版本重构
@@ -505,6 +512,30 @@ class GC:
         # wmw.append(turn.message)
         ww.append(turn)
 
+    def gc_context(self,turn):
+        if self.usage>=self.max_token:
+            text = ""
+            for i in self._inactive_turns:
+                text+=f"{i.formatted_text}"
+            
+
+    def gc(self,turn:st.Turn):
+        atw = self._active_turns_window
+
+        if len(atw)==self.max_active_turn:
+            out_turn = atw.popleft()
+            self._inactive_turns.append(out_turn)    
+        atw.append(turn)
+        
+
+        self.gc_work(turn)
+
+
+
+
+
+
+        
         
         # for i,msg in enumerate(turn._insert_msg):
         #     turn._edit_insert_msg(
@@ -629,8 +660,8 @@ class MessageManager:
         # 关于有些地方注释属性和有些地方没有注释，其实这是为了方便我补全，并不是规范（（（汗 2026/07/30 17:51:
   
         msg = message.message
-        usage = message.usage
         role = message.role
+        usage = message.usage
         # prompt = message.prompt
 
         if self._pending is not None:
@@ -640,10 +671,10 @@ class MessageManager:
         if message.work_enable != None:
             self._pending = message.work_enable
 
-        msg = self._func_menu[role](msg)
+        msg = self._func_menu[role](msg,usage)
         if role == "user":
 
-            self._turn = st.Turn(msg)
+            self._turn = st.Turn(msg,usage)
             # self._turns.append(self._turn)
             # for m,f in msg:
             #     if self._work_enable:
@@ -668,7 +699,6 @@ class MessageManager:
             #         f,
             #         self._work_enable,
             #     )
-        self._turn.usage = usage
 
 
         
@@ -676,17 +706,19 @@ class MessageManager:
     # def _build_turn(self):
     #     ...
     @classmethod
-    def build_prompt_msg(cls,msg,role=None):
+    def build_prompt_msg(cls,msg,usage=None,role=None):
 
         preset = cls.prompt_presets.get(role, "")
         content = f"{preset}\n{msg}"
+        usage = LLM.count_tokens(content)
+
         return [({
             "role": "user",
             "content": content,
             "name": role,
-        },False)]
+        },usage,False)]
 
-    def _build_user_msg(self,msg,name=None):
+    def _build_user_msg(self,msg,usage,name=None):
         res = {
             "role":"user",
             "content":f"message:{msg} time:{LLM.get_time()}"
@@ -695,7 +727,7 @@ class MessageManager:
             res["name"] = name
         return res
 
-    def _build_bot_msg(self,msg):
+    def _build_bot_msg(self,msg,usage):
         tool_calls = msg.tool_calls
         if tool_calls:
             self._tool_stage = st.ToolStage(
@@ -703,9 +735,9 @@ class MessageManager:
             )
         else:
             self._tool_stage = None
-        return [(msg,False)]
+        return [(msg,usage,False)]
 
-    def _build_tool_msg(self,msg:st.ToolRes):
+    def _build_tool_msg(self,msg:st.ToolRes,usage):
         res = [
                 (
                     {
@@ -713,6 +745,7 @@ class MessageManager:
                     "tool_call_id":msg.tool_id,
                     "content":f"{msg.res}",
                     },
+                    usage,
                     msg.is_clear
                 )
             ]
@@ -902,8 +935,8 @@ class Agent:
             else:
                 # j = st.ToolRes
                 todo = None
-                if isinstance(j.res,st.TodoRes) and j.res.todo:
-                    todo = j.res.todo
+                if getattr(j, "todo_res", None) and j.todo_res.todo:
+                    todo = j.todo_res.todo
                 yield{
                     "type":"tool",
                     "body":{
@@ -999,4 +1032,3 @@ msg = turn_list+prompt+turn
 """
 
 """
-

@@ -14,7 +14,7 @@ class BaseMsgBlock:
     def __init__(self):
         self._insert_index = []
         self._insert_msg = []
-        self._formatted_text = ""
+        self._formatted_text = []
         self.flag = 0 # 标识被压缩
         # [[],[],[]]
 
@@ -24,18 +24,29 @@ class BaseMsgBlock:
         self._cursor = 0
         self.msg_changed = 0 #列表发生变化就为1  2026/08/29 01:00:
         
+        self._usage = 0
 
-        
+    @property
+    def usage(self):
+        return self._usage
+
+
+    @usage.setter
+    def usage(self,v):
+        self._usage = v
+
+
     def _push(self,message):
-        for msg,flag in message:
+        for msg,usage,flag in message:
 
             self._inner_messages.append(msg)
-            self._formatted_text += format_message(msg)
+            self._usage += usage
+            self._formatted_text.append(format_message(msg))
             
             if flag:
                 if not self._cursor:
                     self._cursor = len(self._normal_msg)
-                self._append_insert(self._cursor,msg)
+                self._append_insert(self._cursor,[msg])
             else:
                 self._normal_msg.append(msg)
 
@@ -48,6 +59,10 @@ class BaseMsgBlock:
             res[j:j] = self._insert_msg[i]
 
         return res
+
+    def _build_formatted(self):
+        for msg in self.inner_messages:
+            self._formatted_text = format_message(msg)
             
     def _append_insert(self, i, v):
         # v = [v]
@@ -66,16 +81,24 @@ class BaseMsgBlock:
         self.msg_changed = 1
     #  2026/08/22 23:25: 简单重构了下逻辑，这样每次获取消息就不用重新拼装了
     #  实话说我早就看这个不爽了，完成前面的任务后也是把这个不爽点修了
+
+    def _check(self):
+        if self.msg_changed:
+            self.msg_changed = 0
+            self._inner_messages = self._build_message()
+            self._formatted_text = self._build_formatted()
     
     @property
     def inner_messages(self):
         # property大法,爽！property大法,爽！!property大法,爽！! ！😋 2026/08/29 01:16:
-
-        if self.msg_changed:
-            self.msg_changed = 0
-            self._inner_messages = self._build_message()
+        self._check()
         return self._inner_messages
-    # 补丁，每次edit就重构心里还是太别扭了 2026/08/29 01:05:
+    # 补丁，每次edit就重构,心里还是太别扭了 2026/08/29 01:05:
+
+    @property
+    def formatted_text(self):
+        self._check()
+        return self._formatted_text
 
 @dataclass
 class PromptClass:
@@ -147,6 +170,7 @@ class ToolRes(DebugMixin):
     is_last: bool = False
     is_clear: bool = False
     _res: object = None
+    todo_res: object = None
 
     def __post_init__(self):
         if self.i == self.n:
@@ -165,6 +189,7 @@ class ToolRes(DebugMixin):
 
         if isinstance(value,TodoRes):
             self.work_enable = value.work_enable
+            self.todo_res = value
             r = value.res
         self._res = r
             
@@ -207,22 +232,28 @@ class Message:
 class Work(BaseMsgBlock):
     i : int = 0
     index: int = 0
-
-    @property
-    def formatted_text(self):
-        if self.archive_msg:
-            return 
-        return self._formatted_text
+    # should_archive: bool = True
 
     def __post_init__(self):
         super().__init__()
         self.archive_msg = []
+        
+    @property
+    def formatted_text(self):
+        if self.archive_msg:
+            return self.archive_msg
+        return super().formatted_text
 
     @property
     def inner_messages(self):
         if self.archive_msg:
             return self.archive_msg
         return super().inner_messages
+
+
+
+
+        
 
     
 
@@ -231,8 +262,8 @@ class Work(BaseMsgBlock):
 @dataclass
 class Turn(DebugMixin,BaseMsgBlock):
     user_msg: str
+    user_usage:int
     _work = None
-    _usage: int = 0
 
     # a = [1,2,3,4,5,9,10,20,24,26,28,30]
     # b = [5,10,20,24,26,28]
@@ -252,15 +283,23 @@ class Turn(DebugMixin,BaseMsgBlock):
         self._formatted_text += format_message(self.user_msg)
 
     def archive_work(self,id,msg):
-        self.works[id].archive_msg = [msg]
+        m,usage,we = msg[0]
+        self.works[id].archive_msg = [m]
+        self.works[id].usage = usage
+
+
 
     @property
     def usage(self):
-        return self._usage
+        wu = 0
+        for i in self.works:
+            wu+=i.usage
+        return self.user_usage+wu+super().usage
 
-    @usage.setter
-    def usage(self,v):
-        self._usage+=v
+
+
+
+
 
     #  2026/08/26 11:17:  艹了，设计上没有考虑多work，现在好了（
 
@@ -290,6 +329,7 @@ class Turn(DebugMixin,BaseMsgBlock):
         if self._work:
             self.works.append(self._work)
             self._work = None
+
         self._push(msg)
 
 
@@ -303,11 +343,19 @@ class Turn(DebugMixin,BaseMsgBlock):
 
     @property
     def work_formatted_text(self):
-        return [w.formatted_text for w in self.works if w.formatted_text]
+        # res = []
+        # for w in self.works:
+        #     ft = ""
+        #     if w.should_archive:
+        #         ft = w.formatted_text
+        #     res.append(ft)
+        # return res
+        return [
+            w.formatted_text for w in self.works if w.formatted_text
+        ]
         
-    @property
-    def formatted_text(self):
-        ...
+
+
 
     @property
     def message(self):
@@ -420,5 +468,4 @@ if __name__ == "__main__":
     #     t.push("1111",True)
     #     t.push("1111",True)
     #     t.push("1111",True)
-
 
