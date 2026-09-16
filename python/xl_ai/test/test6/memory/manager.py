@@ -19,7 +19,7 @@ class Archive:
         self.lid = self._meta["last_id"]
 
     def add_archive(self, msg) -> int:
-    
+        msg = "".join(msg)
         lid = self.lid
         (self.dir / f"{lid}.md").write_text(msg, encoding="utf-8")
         self.lid = lid + 1

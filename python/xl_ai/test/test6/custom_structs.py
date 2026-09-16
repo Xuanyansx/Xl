@@ -20,6 +20,7 @@ class BaseMsgBlock:
 
         self._inner_messages = []
         self._normal_msg = []
+        self._normal_formatted = []
         self._last_index = 0
         self._cursor = 0
         self.msg_changed = 0 #列表发生变化就为1  2026/08/29 01:00:
@@ -39,9 +40,11 @@ class BaseMsgBlock:
     def _push(self,message):
         for msg,usage,flag in message:
 
+            formatted = format_message(msg)
+            
             self._inner_messages.append(msg)
+            self._formatted_text.append(formatted)
             self._usage += usage
-            self._formatted_text.append(format_message(msg))
             
             if flag:
                 if not self._cursor:
@@ -49,6 +52,7 @@ class BaseMsgBlock:
                 self._append_insert(self._cursor,[msg])
             else:
                 self._normal_msg.append(msg)
+                self._normal_formatted.append(formatted)
 
             self._cursor+=1   
 
@@ -61,8 +65,12 @@ class BaseMsgBlock:
         return res
 
     def _build_formatted(self):
-        for msg in self.inner_messages:
-            self._formatted_text = format_message(msg)
+        res = self._normal_formatted.copy()
+        for i,j in enumerate(self._insert_index):
+            res[j:j] = self._insert_msg[i]
+
+        return res
+
             
     def _append_insert(self, i, v):
         # v = [v]
@@ -231,23 +239,23 @@ class Message:
 @dataclass
 class Work(BaseMsgBlock):
     i : int = 0
-    index: int = 0
+    index: int = None
     # should_archive: bool = True
 
     def __post_init__(self):
         super().__init__()
-        self.archive_msg = []
+        self.archive_msg = None
         
     @property
     def formatted_text(self):
         if self.archive_msg:
-            return self.archive_msg
+            return [format_message(self.archive_msg)]
         return super().formatted_text
 
     @property
     def inner_messages(self):
         if self.archive_msg:
-            return self.archive_msg
+            return [self.archive_msg]
         return super().inner_messages
 
 
@@ -261,7 +269,7 @@ class Work(BaseMsgBlock):
 
 @dataclass
 class Turn(DebugMixin,BaseMsgBlock):
-    user_msg: str
+    user_msg: object
     user_usage:int
     _work = None
 
@@ -280,11 +288,11 @@ class Turn(DebugMixin,BaseMsgBlock):
         super().__init__()
         self.works : list[Work]= []
         self._work_summarized_text: list = []
-        self._formatted_text += format_message(self.user_msg)
+        self._user_formatted = format_message(self.user_msg)
 
-    def archive_work(self,id,msg):
+    def archive_work(self,id:int,msg):
         m,usage,we = msg[0]
-        self.works[id].archive_msg = [m]
+        self.works[id].archive_msg = m
         self.works[id].usage = usage
 
 
@@ -336,10 +344,11 @@ class Turn(DebugMixin,BaseMsgBlock):
 
             
     def _work_push(self,msg):
-        if not self._work.index:
+        if self._work.index == None:
             self._work.index = self._cursor
 
         self._work._push(msg)
+
 
     @property
     def work_formatted_text(self):
@@ -351,11 +360,19 @@ class Turn(DebugMixin,BaseMsgBlock):
         #     res.append(ft)
         # return res
         return [
-            w.formatted_text for w in self.works if w.formatted_text
+            w.formatted_text for w in self.works
         ]
         
+    @property
+    def formatted_text(self):
+        res = super().formatted_text.copy()
 
+        for i in reversed(self.works):
+            wi = i.index
+            res[wi:wi] = i.inner_messages
 
+        return [self.user_msg]+res
+    
 
     @property
     def message(self):

@@ -223,6 +223,12 @@ class Todo:
             )
 
         todo = self.todos[todo_id]
+
+        if todo.status == "done":
+            raise st.TodoError(
+                f"这个todo已经{todo.status},手滑了吗还是什么，请反思为什么要继续运行这个todo"
+            )
+
         tasks = todo.tasks
         running_task_id = todo.running_id
         next_task_id = todo.next_id
@@ -348,7 +354,7 @@ class DefaultTools:
 
         for i,j in list(self.ctools.values()):
             if i.__name__[-1] == "C":
-                self.clear_tools.append(i)
+                self.clear_tools.append(i.__name__)
             self._tool_info.append(self._get_tool_info(i,j.__class__.__name__))
 
 
@@ -528,14 +534,7 @@ class GC:
         atw.append(turn)
         
 
-        self.gc_work(turn)
-
-
-
-
-
-
-        
+        self.gc_work(turn)        
         
         # for i,msg in enumerate(turn._insert_msg):
         #     turn._edit_insert_msg(
@@ -706,7 +705,7 @@ class MessageManager:
     # def _build_turn(self):
     #     ...
     @classmethod
-    def build_prompt_msg(cls,msg,usage=None,role=None):
+    def build_prompt_msg(cls,msg,role=None,usage=None):
 
         preset = cls.prompt_presets.get(role, "")
         content = f"{preset}\n{msg}"
@@ -885,16 +884,17 @@ class Agent:
                 self._message_m.messagess
             )
             reply_content = reply.choices[0].message
-            self._message_m.push(
-                st.Message(
-                    self._llm.count_tokens(
-                        reply_content.content
-                    ),
-                    reply_content,
-                    "assistant"
+            if reply_content:
+                self._message_m.push(
+                    st.Message(
+                        self._llm.count_tokens(
+                            reply_content.content
+                        ),
+                        reply_content,
+                        "assistant"
+                    )
                 )
-            )
-            yield "bot",reply
+                yield "bot",reply
             tool_calls = reply_content.tool_calls
 
             if not tool_calls:
