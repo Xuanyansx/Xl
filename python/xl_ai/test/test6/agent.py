@@ -52,7 +52,7 @@ class LLM:
         return datetime.now().strftime("%Y/%m/%d %H:%M")
 
 
-    def summarize(self, transcript, previous_summary=None, target_tokens=500):
+    def summarize(self, transcript, previous_summary=None, target_tokens=1200):
         #  2026/08/21 02:48:懒得写这个函数了，让ai写的
         anchor = (
             f"<previous-summary>\n{previous_summary}\n</previous-summary>\n"
@@ -452,7 +452,8 @@ class GC:
         # self.turns = []
         self._inactive_turns:list[st.Turn] = []
 
-        self.usage = 0
+        self._active_usage = 0
+        self._inactive_usage = 0
         
         # window = deque()
         # self.basic_window:deque[st.Turn] = deque()
@@ -467,7 +468,9 @@ class GC:
     def turns(self):
         return self._inactive_turns+list(self._active_turns_window)
 
-
+    @property
+    def usage(self):
+        return self._active_usage+self._inactive_usage
 
 
     @property
@@ -487,7 +490,7 @@ class GC:
 
         if len(ww) == self.work_TTL:
             out_turn = ww.popleft()
-            out_usage = out_turn.usage
+            last_usage = out_turn.usage
 
             # out_msg = wmw.popleft()
             for i,msg in enumerate(out_turn.work_formatted_text):
@@ -505,8 +508,8 @@ class GC:
                     i,
                     msg
                 )
-            out_usage-=out_turn.usage
-            self.usage -= out_usage
+            # out_usage-=out_turn.usage
+            # self.usage -= out_usage
 
             # return out_usage
             
@@ -517,24 +520,44 @@ class GC:
 
         # wmw.append(turn.message)
         ww.append(turn)
+        return [out_turn,last_usage]
 
-    def gc_context(self,turn):
+    def gc_context(self):
         if self.usage>=self.max_token:
-            text = ""
+            context = ""
             for i in self._inactive_turns:
-                text+=f"{i.formatted_text}"
+                context+=f"{"\n".join(i.formatted_text)}"
+            content = self.temp_llm.summarize(
+                context
+            )
+            lid = self.archive.add_archive(content)
+            amsg = f"归档文件id{lid}，以下为压缩信息\n"
+            
+            res = MessageManager.build_prompt_msg(
+                amsg+content,
+                "summary_role"
+            )
+            turn = st.Turn(res)
+            self._inactive_turns = [turn]
+            self._inactive_usage = turn.usage
+            
             
 
     def gc(self,turn:st.Turn):
         atw = self._active_turns_window
-
-        if len(atw)==self.max_active_turn:
-            out_turn = atw.popleft()
-            self._inactive_turns.append(out_turn)    
-        atw.append(turn)
         
+        while len(atw)==self.max_active_turn or self._active_usage>=self.max_token:
+            out_turn = atw.popleft()
+            self._inactive_turns.append(out_turn)
+            self._inactive_usage+=out_turn.usage
+            self.archive-=out_turn.usage
 
-        self.gc_work(turn)        
+        atw.append(turn)
+        self._active_usage+=turn.usage
+    
+
+        self.gc_work(turn)
+        self.gc_context()     
         
         # for i,msg in enumerate(turn._insert_msg):
         #     turn._edit_insert_msg(
@@ -587,7 +610,7 @@ class MessageManager:
     "archive_role":"""
     [ARCHIVE CONTEXT — LONG-TERM MEMORY] 
     以下消息将附带一个归档文件ID（archive_id），指向用户的历史记忆档案。
-    详细内容请使用工具查看
+    详细内容请使用get_archive工具查看
     """
     }
     
@@ -660,7 +683,7 @@ class MessageManager:
   
         msg = message.message
         role = message.role
-        usage = message.usage
+        # usage = message.usage
         # prompt = message.prompt
 
         if self._pending is not None:
@@ -670,10 +693,12 @@ class MessageManager:
         if message.work_enable != None:
             self._pending = message.work_enable
 
-        msg = self._func_menu[role](msg,usage)
+        msg = self._func_menu[role](msg)
         if role == "user":
 
-            self._turn = st.Turn(msg,usage)
+            self._turn = st.Turn(msg)
+            self._work_enable = False
+
             # self._turns.append(self._turn)
             # for m,f in msg:
             #     if self._work_enable:
@@ -705,7 +730,7 @@ class MessageManager:
     # def _build_turn(self):
     #     ...
     @classmethod
-    def build_prompt_msg(cls,msg,role=None,usage=None):
+    def build_prompt_msg(cls,msg,role=None):
 
         preset = cls.prompt_presets.get(role, "")
         content = f"{preset}\n{msg}"
@@ -717,16 +742,18 @@ class MessageManager:
             "name": role,
         },usage,False)]
 
-    def _build_user_msg(self,msg,usage,name=None):
+    def _build_user_msg(self,msg,name=None):
         res = {
             "role":"user",
             "content":f"message:{msg} time:{LLM.get_time()}"
             }
         if name:
             res["name"] = name
-        return res
 
-    def _build_bot_msg(self,msg,usage):
+        usage = LLM.count_tokens(f"{msg}")
+        return [(res,usage,False)]
+
+    def _build_bot_msg(self,msg):
         tool_calls = msg.tool_calls
         if tool_calls:
             self._tool_stage = st.ToolStage(
@@ -734,9 +761,15 @@ class MessageManager:
             )
         else:
             self._tool_stage = None
+
+        c = msg.content if msg.content else ""
+        usage = LLM.count_tokens(
+            f"{tool_calls}"+c
+            )
         return [(msg,usage,False)]
 
-    def _build_tool_msg(self,msg:st.ToolRes,usage):
+    def _build_tool_msg(self,msg:st.ToolRes):
+        
         res = [
                 (
                     {
@@ -744,7 +777,7 @@ class MessageManager:
                     "tool_call_id":msg.tool_id,
                     "content":f"{msg.res}",
                     },
-                    usage,
+                    LLM.count_tokens(msg.res),
                     msg.is_clear
                 )
             ]
@@ -780,7 +813,7 @@ class MessageManager:
             # )
             self.push(
                 st.Message(
-                    LLM.count_tokens(msg),
+                    # LLM.count_tokens(msg),
                     msg,
                     role="prompt"
                 )
@@ -873,8 +906,8 @@ class Agent:
 
         self._message_m.push(
             st.Message(
-                self._llm.count_tokens(user_msg),
-                user_msg
+                # self._llm.count_tokens(user_msg),
+                user_msg,
             )
         )
         
@@ -887,9 +920,9 @@ class Agent:
             if reply_content:
                 self._message_m.push(
                     st.Message(
-                        self._llm.count_tokens(
-                            reply_content.content
-                        ),
+                        # self._llm.count_tokens(
+                        #     reply_content.content
+                        # ),
                         reply_content,
                         "assistant"
                     )
@@ -908,7 +941,7 @@ class Agent:
             for i in gen:
                 self._message_m.push(
                     st.Message(
-                        self._llm.count_tokens(f"{i.res}"+i.prompt),
+                        # self._llm.count_tokens(f"{i.res}"+i.prompt),
                         i,
                         "tool"
                     )

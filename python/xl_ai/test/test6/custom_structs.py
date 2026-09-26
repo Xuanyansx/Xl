@@ -2,6 +2,7 @@
 from itertools import pairwise
 from pydantic import BaseModel, Field
 from dataclasses import dataclass, field
+from copy import deepcopy
 from xl_lib import format_message
 
 
@@ -14,6 +15,8 @@ class BaseMsgBlock:
     def __init__(self):
         self._insert_index = []
         self._insert_msg = []
+        self._insert_formatted = []
+        
         self._formatted_text = []
         self.flag = 0 # 标识被压缩
         # [[],[],[]]
@@ -21,6 +24,7 @@ class BaseMsgBlock:
         self._inner_messages = []
         self._normal_msg = []
         self._normal_formatted = []
+
         self._last_index = 0
         self._cursor = 0
         self.msg_changed = 0 #列表发生变化就为1  2026/08/29 01:00:
@@ -67,7 +71,7 @@ class BaseMsgBlock:
     def _build_formatted(self):
         res = self._normal_formatted.copy()
         for i,j in enumerate(self._insert_index):
-            res[j:j] = self._insert_msg[i]
+            res[j:j] = self._insert_formatted[i]
 
         return res
 
@@ -84,7 +88,16 @@ class BaseMsgBlock:
 
 
     def _edit_insert_msg(self,i,msg):
-        self._insert_msg[i] = [msg]
+        L = [[] for _ in range(len(self._insert_msg))]
+
+        if not self.msg_changed:
+            self._insert_msg = L
+            self._insert_formatted = deepcopy(L)
+
+        self._insert_msg[i] += [msg]
+        self._insert_formatted[i] += [
+            format_message(msg)
+        ]
         # self.inner_messages = self._build_message()
         self.msg_changed = 1
     #  2026/08/22 23:25: 简单重构了下逻辑，这样每次获取消息就不用重新拼装了
@@ -223,7 +236,7 @@ class ToolStage:
 
 @dataclass
 class Message:
-    usage:int
+    # usage:int
     message: object
     role: str = "user"
     prompt: object = None
@@ -270,7 +283,7 @@ class Work(BaseMsgBlock):
 @dataclass
 class Turn(DebugMixin,BaseMsgBlock):
     user_msg: object
-    user_usage:int
+    _user_usage:int = 0
     _work = None
 
     # a = [1,2,3,4,5,9,10,20,24,26,28,30]
@@ -288,6 +301,8 @@ class Turn(DebugMixin,BaseMsgBlock):
         super().__init__()
         self.works : list[Work]= []
         self._work_summarized_text: list = []
+        self._user_usage = self.user_msg[0][1]
+        self.user_msg = self.user_msg[0][0]
         self._user_formatted = format_message(self.user_msg)
 
     def archive_work(self,id:int,msg):
@@ -302,7 +317,7 @@ class Turn(DebugMixin,BaseMsgBlock):
         wu = 0
         for i in self.works:
             wu+=i.usage
-        return self.user_usage+wu+super().usage
+        return self._user_usage+wu+super().usage
 
 
 
@@ -369,9 +384,9 @@ class Turn(DebugMixin,BaseMsgBlock):
 
         for i in reversed(self.works):
             wi = i.index
-            res[wi:wi] = i.inner_messages
+            res[wi:wi] = i.formatted_text
 
-        return [self.user_msg]+res
+        return [self._user_formatted]+res
     
 
     @property
