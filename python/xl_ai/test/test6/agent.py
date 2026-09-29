@@ -44,6 +44,7 @@ class LLM:
         return res
     @staticmethod
     def count_tokens(text, encoding_name = "cl100k_base"):
+        text = f"{text}"
         encoding = tiktoken.get_encoding(encoding_name)
         return len(encoding.encode(text))
 
@@ -481,10 +482,7 @@ class GC:
         return msg
 
 
-    def gc_work(self,turn):
-
-        ww = self._work_window
-        
+    def gc_work(self,turn,ww:deque[st.Turn]):        
         # wmw = self.work_msg_window
         # bw = self.basic_window
 
@@ -503,12 +501,19 @@ class GC:
                         f"归档id{lid}",
                         "archive_role"
                     )
-                )
+            )
                 out_turn.archive_work(
                     i,
                     msg
                 )
-            # out_usage-=out_turn.usage
+            diff = last_usage-out_turn.usage
+
+            if out_turn.is_active:
+                self._active_usage-=diff
+            else:
+                self._inactive_usage-=diff
+            
+
             # self.usage -= out_usage
 
             # return out_usage
@@ -520,7 +525,7 @@ class GC:
 
         # wmw.append(turn.message)
         ww.append(turn)
-        return [out_turn,last_usage]
+        # return selectL[out_turn.flag],diff
 
     def gc_context(self):
         if self.usage>=self.max_token:
@@ -540,59 +545,34 @@ class GC:
             turn = st.Turn(res)
             self._inactive_turns = [turn]
             self._inactive_usage = turn.usage
+            return True
+        return False
+
+            # return self._inactive_usage,turn.usage
             
             
 
     def gc(self,turn:st.Turn):
         atw = self._active_turns_window
-        
+        ww = self._work_window
+
         while len(atw)==self.max_active_turn or self._active_usage>=self.max_token:
             out_turn = atw.popleft()
+            out_turn.is_active = 0
             self._inactive_turns.append(out_turn)
             self._inactive_usage+=out_turn.usage
-            self.archive-=out_turn.usage
+            self._active_usage-=out_turn.usage
 
         atw.append(turn)
         self._active_usage+=turn.usage
-    
 
-        self.gc_work(turn)
-        self.gc_context()     
+        self.gc_work(turn,ww)
         
-        # for i,msg in enumerate(turn._insert_msg):
-        #     turn._edit_insert_msg(
-        #         i,
-        #         f"{msg[:100]},内容已被归档，归档id{archive.lid}，详细内容请使用工具请使用get_archive来查看"
-        #     )
-        #     archive.add_archive(msg)
+        if self.gc_context():
+            self._work_window:deque[st.Turn] = deque()
 
-        # for i,msg in enumerate(turn.work._insert_msg):
-        #     turn._edit_insert_msg(
-        #         i,
-        #         f"{msg[:100]},内容已被归档，归档id{archive.lid}，详细内容请使用工具请使用get_archive来查看"
-        #     )
-        #     archive.add_archive(msg)
-        #  2026/08/21 04:52: 冗余就冗余吧，我现在已经神智不清了（（（，之后在优化吧
-
-
-        # for i,msgs in enumerate(turn.insert_messages):
-        #     r = []
-        #     lid = archive.add_archive(msg)
-        #     for msg in msgs:
-        #         r.append(
-        #         f"""
-        #         {msg[:100]},
-        #         内容已被归档，归档id{lid}，
-        #         详细内容请使用工具请使用get_archive来查看
-        #         """
-        #         )
-        #     turn.edit_insert_msg(
-        #         i,
-        #         r
-        #     )
-
-        
         return self.message
+
 
 
 
@@ -889,7 +869,7 @@ class Agent:
                 else:
                     res = self._mcp_client.tool_call(name,args)      
             except Exception as e:
-                res = f"{e}"
+                res = e
             
             tool_res.res = res
             tool_res.tool_id = id
@@ -954,7 +934,10 @@ class Agent:
 
         
     def send(self,msg):
-
+        #  2026/09/29 22:55:
+        # send驱动的_call_tool+_loop啦，我觉得这解耦合非常漂亮,
+        # 可能确实有瑕疵，但是我还是喜欢这段
+        
         for i,j in self._loop(msg):
             if i == 'bot':
                 yield {
@@ -1059,9 +1042,31 @@ msg = turn_list+prompt+turn
 
 
 
-
 """
 
 """
+2026/09/29 21:47:
+我最近在想一个新的架构，灵感是dsh的一切皆插件。
+我打算将什么消息管理，gc，LLM调用重新再做做，解耦合彻底点，就暴露几个接口。
+像框架一样，需要什么就用这个接口组合一个agent：
+先用系统提示词+Head接口(Head(系统提示词))组合成头部，在加agent循环，消息管理等这些接口组合成body，（body(...)），最后定义一个Home也就是沙箱，（linux沙箱我打算用命名空间来做，当这种底层的我会封装为接口，这样兼容性会好点）沙箱定义了agent的工作范围和可用的工具（skill，mcp，自定义函数），通过装饰器装饰指定格式的函数即可给沙箱注册工具；沙箱还可以传入权限，默认权限是部分权限也就是访问工作区外的需要申请。最后接口格式就是Home([path],权限级别)。
+全部声明完成后，就可以组合成一个agent类，然后.chat()了。
+对了还需要一个window来包装交互界面（盖房子了属于是wwwww
+
+调用和协作这样块是agent类做的，
+其他的类只提供接口，其他的大类也只管调用这些模块接口，
+访问干涉模块内部的事情是禁止的。
+就像body不用管传入的其他模块，
+只要调用传入模块提供的接口即可，其他大类也是一样。
+对于agent类也是一样的，它不在乎home，body，head是字幕运行的，
+它只知道我需要这个功能可以调这个类的方法，最后其他消费agent类的也同样如此
+
+=====（home）======
+=                =
+=     | agent|     /
+=     |(head)|   (window)
+=     |(body)|     \
+=                =
+==================
 
 """

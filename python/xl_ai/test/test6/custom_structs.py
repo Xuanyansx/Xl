@@ -283,6 +283,7 @@ class Work(BaseMsgBlock):
 @dataclass
 class Turn(DebugMixin,BaseMsgBlock):
     user_msg: object
+    is_active = 1 
     _user_usage:int = 0
     _work = None
 
@@ -456,17 +457,7 @@ class Turn(DebugMixin,BaseMsgBlock):
 
         # [0,1,2,3,4,5,6][0,1,2, 3, 4]
         # [0,1,2,3,4,5,6, 7,8,9,10,11]
-
-
-
-
-
-
-
-
-
-    
-
+   
              
 
 class TodoError(Exception):
