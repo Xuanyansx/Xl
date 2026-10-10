@@ -306,7 +306,9 @@ async def main():
     }]
     with open(f"{Path(__file__).parent}/memory/long_memory.md", mode="r", encoding="UTF-8") as f:
         long_m = f.read()
-    client = UserClinet("sk-54e96e93441647938ac1986980e7ed3f",mcp_config,long_m,tool=tool)
+        key = "sk-54e96e93441647938ac1986980e7ed3f"
+        key = "sk-572c20c0b5c74eafb9cbb00ec20dfdc3"
+    client = UserClinet(key,mcp_config,long_m,tool=tool)
     await client.run()
 # try:
 asyncio.run(main())

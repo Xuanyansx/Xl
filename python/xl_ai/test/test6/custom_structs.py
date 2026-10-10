@@ -3,7 +3,7 @@ from itertools import pairwise
 from pydantic import BaseModel, Field
 from dataclasses import dataclass, field
 from copy import deepcopy
-from xl_lib import format_message
+from lib.format import format_message
 
 
 

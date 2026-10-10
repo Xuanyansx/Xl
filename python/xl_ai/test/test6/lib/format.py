@@ -1,3 +1,5 @@
+
+
 def _get(msg, key, default=None):
     """消息要么是 dict（user/tool/system），要么是 SDK 对象（assistant）。"""
     if isinstance(msg, dict):
@@ -35,3 +37,6 @@ def format_message(msg):
     return ""
 
 # 懒得写这个功能了（上面的代码），给ai写了，反正我也会写，偷懒这一块 2026/09/16 16:59:
+
+
+

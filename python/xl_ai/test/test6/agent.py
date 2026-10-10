@@ -1,4 +1,5 @@
 import json
+import math
 import asyncio
 import inspect
 import tiktoken
@@ -7,9 +8,10 @@ import custom_structs as st
 from datetime import datetime
 from collections import deque
 from pydantic import BaseModel
-from memory.manager import Archive
+from memory.manager import Archive,MemoryTool
 from xl_mcp.mcp_cs import xlmcp_client
 from typing import Annotated,Literal,get_type_hints
+from lib.file_utils import read_file,grep
 # import logging
 
 
@@ -327,14 +329,85 @@ class TestTool:
             )
         return {"stderr":res.stderr,"stdout":res.stdout,"returncode":res.returncode}
 
+    def read_range(
+            self,
+            path:Annotated[str,"文件路径"],
+            start:Annotated[int,"从多少字符开始"],
+            pages:Annotated[int,"往后读多少页/行"],
+            width:Annotated[int,"一页有多少字符，默认80,单位字符，line模式无效"]=80,
+            mode:Literal["char","line"]="char",
+            encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
+        ):
+        
+        """
+    mode：
+    选择模式，默认是char模式
 
+    char模式：
+    按「字符宽度」把文件分块（分页）只读，不改动文件也不重排内容；
+    返回本页文本、下次起始、以及剩余页数。
+    被 width 截断的行会以「断行续接」单列，原文不丢。
 
+    line模式：
+    按「行」来读
+    返回文本内容，超出最大范围会被截断
+        
+        """
+        max_char = 2000
+        a_text = ""
+        #暂时这样定义配置吧 2026/10/10 10:38:
+        
+        with open(path, encoding=encoding) as f:
+            text = f.read()
+
+        if start<0 or start>len(text):
+            raise ValueError(f"非法参数 offset{start}，应要大于等于0且小于{len(text)}")
+
+        if width <= 0:
+            raise ValueError(f"width:{width} 太小了")
+
+        sy = len(text)-(start+pages*width)
+        after = sy/width
+        after = math.ceil(after)
+
+        if after <0 :
+            after = 0
+
+        if mode == "char":
+            a_text = f"""
+后面还有{after}页，width为{width}
+剩余字符{sy}
+当前文件指针位于：{len(text)-sy}
+"""
+
+        return read_file(
+            path,
+            start,pages,
+            width,mode,
+            encoding,
+            max_char=max_char
+        )+a_text
+    
+    def tgrep(
+            self,
+            pattern:Annotated[str,"ripgrep风格的正则"],
+            path:Annotated[str,"路径"],
+            include:Annotated[str,"glob表达式,默认为None"]=None,
+            encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
+        ):
+        """
+        ripgrep为内核的grep工具，返回匹配的词在整个文件的字符位置
+        
+        """
+        return grep(pattern,path,include,encoding)
+        
 
 class DefaultTools:
     def __init__(self):
         self._tools = [
             Todo(),
             TestTool(),
+            MemoryTool()
         ]
         self.ctools={}
         self._tool_info = []
@@ -795,7 +868,7 @@ class MessageManager:
                 st.Message(
                     # LLM.count_tokens(msg),
                     msg,
-                    role="prompt"
+                    role="inner_system"
                 )
             )
             return False

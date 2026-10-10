@@ -18,7 +18,7 @@ Config = {
     "max_active_turn" : 20,
     "max_turn" : 50,
     "work_TTL" : 3,
-    "load_tools" : []
+    "load_tools" : [],
 }
 
 if __name__ == "__main__":
