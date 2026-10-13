@@ -333,13 +333,15 @@ class TestTool:
             self,
             path:Annotated[str,"文件路径"],
             start:Annotated[int,"从多少字符开始"],
-            pages:Annotated[int,"往后读多少页/行"],
+            limit:Annotated[int,"往后读多少页/行"],
             width:Annotated[int,"一页有多少字符，默认80,单位字符，line模式无效"]=80,
             mode:Literal["char","line"]="char",
             encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
         ):
         
         """
+    本质是文本读取工具，不要读取二进制文件
+
     mode：
     选择模式，默认是char模式
 
@@ -354,35 +356,38 @@ class TestTool:
         
         """
         max_char = 2000
-        a_text = ""
-        #暂时这样定义配置吧 2026/10/10 10:38:
         
+        #暂时这样定义配置吧 2026/10/10 10:38:
+        a_text = ""
+
         with open(path, encoding=encoding) as f:
             text = f.read()
 
         if start<0 or start>len(text):
-            raise ValueError(f"非法参数 offset{start}，应要大于等于0且小于{len(text)}")
+            raise ValueError(f"非法参数 start：{start}，应小于等于文件长度：{len(text)}")
+
+        if limit<0:
+            raise ValueError(f"非法参数limit:{limit}")
 
         if width <= 0:
             raise ValueError(f"width:{width} 太小了")
 
-        sy = len(text)-(start+pages*width)
+        sy = len(text)-(start+limit*width)
         after = sy/width
         after = math.ceil(after)
 
         if after <0 :
             after = 0
 
-        if mode == "char":
+        if mode.lower() == "char":
             a_text = f"""
 后面还有{after}页，width为{width}
-剩余字符{sy}
-当前文件指针位于：{len(text)-sy}
+剩余页数仅在保持 width 不变时有效
 """
 
         return read_file(
             path,
-            start,pages,
+            start,limit,
             width,mode,
             encoding,
             max_char=max_char
@@ -645,7 +650,6 @@ class GC:
             self._work_window:deque[st.Turn] = deque()
 
         return self.message
-
 
 
 
@@ -1141,5 +1145,22 @@ msg = turn_list+prompt+turn
 =     |(body)|     \
 =                =
 ==================
+
+
+
+2026/10/10 23:48:
+记忆系统我其实打算用jev来的，日常使用也打算用jev来优化体验
+假设让模型日常交互，时常会思考半天，然后才进行下一步
+但反观人就不一样，那不成人每次的行动都思考下一步吗（笑
+这就是所谓的「系统1」，「系统2」理论
+目前的jev模型有望成为agent系统中的「系统1」，它自己也是说自己是「系统1」
+既然模型有了，但是我却没有什么思路
+我的不清楚合适要调用系统1模型jev，何时调用系统2模型
+靠jev可以解决大部分的事（存疑），
+当jev遇到无法处理的问题如何判断并切换到系统2模型，这也是一个卡点
+
+似乎可以拜读下jev-Mem这个项目，看看它的思想
+
+
 
 """

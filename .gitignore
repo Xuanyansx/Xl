@@ -10,5 +10,7 @@ python/xl_ai/test/test4/kali-mcp
 
 # 画像/分析产物，不入库
 我的开发者画像与足迹.md
+
 ripgrep
+*.pyc
 
