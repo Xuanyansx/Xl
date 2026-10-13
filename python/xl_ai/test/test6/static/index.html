@@ -160,6 +160,9 @@
     line-height: 1.7;
     font-size: 14px;
     word-break: break-word;
+    /* 修复：纯文本消息保留换行与连续空格（此前换行被折叠成一行） */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
   .msg.user .bubble {
     color: #fff;
@@ -358,6 +361,40 @@
     white-space: pre-wrap;
   }
 
+  .note-line { color: var(--text-3); font-size: 12px; padding: 2px 0; }
+
+  /* 代码块：语言标签 + 复制按钮 */
+  .code-block { margin: 8px 0; }
+  .code-block .code-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 13px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--hairline);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .code-block .code-head .copy {
+    margin-left: auto;
+    font: inherit;
+    font-size: 11px;
+    color: var(--text-2);
+    background: transparent;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 999px;
+    padding: 2px 9px;
+    cursor: pointer;
+    transition: transform 140ms var(--ease-out), color 160ms var(--ease-out),
+                border-color 160ms var(--ease-out);
+  }
+  .code-block .code-head .copy:active { transform: scale(.95); }
+  .code-block .code-head .copy.copied { color: var(--ok); border-color: rgba(99,230,164,.5); }
+  .code-block pre { margin: 0; border-radius: 0 0 10px 10px; }
+
   /* 输入中的指示 */
   .typing {
     display: inline-flex;
@@ -492,8 +529,46 @@
   }
   .send:active { transform: scale(.93); }
   .send:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+  /* 生成中：发送键变停止键 */
+  .send .i-stop { display: none; }
+  .send.stop {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: none;
+  }
+  .send.stop .i-send { display: none; }
+  .send.stop .i-stop { display: block; }
   .send:focus-visible { outline: 2px solid var(--accent-3); outline-offset: 2px; }
   .send svg { width: 17px; height: 17px; }
+  /* 回到底部 */
+  #toBottom {
+    position: absolute;
+    top: -46px;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--surface-solid);
+    border: 1px solid var(--hairline-strong);
+    color: var(--text-2);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: var(--shadow-2);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(6px);
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out),
+                color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+  }
+  #toBottom.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+  @media (hover: hover) and (pointer: fine) {
+    #toBottom:hover { color: var(--text); border-color: rgba(157,140,255,.5); }
+  }
+  #toBottom:active { transform: translateX(-50%) scale(.97); }
   #hint {
     max-width: 880px;
     margin: 8px auto 0;
@@ -696,16 +771,26 @@
             <button data-c="如果让你给自己取名字，你想叫什么？">问问它的名字</button>
           </div>
         </div>
-        <div class="msgs-inner" id="msgsInner"></div>
+        <div class="msgs-inner" id="msgsInner" role="log" aria-live="polite" aria-relevant="additions"></div>
       </div>
 
       <div id="composer-wrap">
+        <button id="toBottom" type="button" aria-label="回到最新消息">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M6 13l6 6 6-6"/>
+          </svg>
+          最新
+        </button>
         <div class="composer">
           <textarea id="input" rows="1" placeholder="和它说点什么…（Shift+Enter 换行）"></textarea>
-          <button class="send" id="send" aria-label="发送">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+          <button class="send" id="send" type="button" aria-label="发送">
+            <svg class="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
                  stroke-linecap="round" stroke-linejoin="round">
               <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+            <svg class="i-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="7" y="7" width="10" height="10" rx="2"/>
             </svg>
           </button>
         </div>
@@ -746,6 +831,8 @@ const msgsInner = $("msgsInner");
 const input = $("input");
 const sendBtn = $("send");
 let streaming = false;
+let controller = null;
+const DRAFT_KEY = "xl_ai_draft_v1";
 
 const TASK_META = {
   done:    { icon: "✓", label: "已完成" },
@@ -768,6 +855,14 @@ function nearBottom() {
 function scrollBottom() {
   const m = $("msgs");
   if (nearBottom()) m.scrollTop = m.scrollHeight;
+  updateToBottom();
+}
+
+/* 上滚阅读时不打扰；离开底部才提示"最新" */
+function updateToBottom() {
+  const m = $("msgs");
+  const away = m.scrollHeight - m.scrollTop - m.clientHeight;
+  $("toBottom").classList.toggle("show", away > 240);
 }
 
 function el(tag, cls, text) {
@@ -798,8 +893,12 @@ function addBot(content, think) {
   if (hasContent) {
     const bubble = el("div", "bubble md");
     const html = md2html(content);
-    if (html) bubble.innerHTML = html;
-    else bubble.textContent = content;
+    if (html) {
+      bubble.innerHTML = html;
+      enhanceCodeBlocks(bubble);
+    } else {
+      bubble.textContent = content;
+    }
     wrap.appendChild(bubble);
   }
   if (hasThink) {
@@ -858,6 +957,44 @@ function addError(msg) {
   wrap.appendChild(el("div", "err", "⚠ " + msg));
 }
 
+function addNote(text) {
+  const wrap = addMsg("bot");
+  wrap.appendChild(el("div", "note-line", text));
+}
+
+/* 给 markdown 代码块加上语言标签与复制按钮 */
+function enhanceCodeBlocks(root) {
+  root.querySelectorAll("pre").forEach((pre) => {
+    if (pre.parentNode && pre.parentNode.classList.contains("code-block")) return;
+    const code = pre.querySelector("code");
+    const m = /language-([\w+#-]+)/.exec(code ? code.className : "");
+    const lang = m ? m[1] : "text";
+
+    const box = el("div", "code-block");
+    const head = el("div", "code-head");
+    head.appendChild(el("span", "lang", lang));
+
+    const btn = el("button", "copy", "复制");
+    btn.type = "button";
+    btn.addEventListener("click", async () => {
+      const text = code ? code.textContent : pre.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = "已复制";
+        btn.classList.add("copied");
+      } catch {
+        btn.textContent = "复制失败";
+      }
+      setTimeout(() => { btn.textContent = "复制"; btn.classList.remove("copied"); }, 1400);
+    });
+    head.appendChild(btn);
+
+    pre.parentNode.insertBefore(box, pre);
+    box.appendChild(head);
+    box.appendChild(pre);
+  });
+}
+
 function setStatus(text, kind) {
   $("statusText").textContent = text;
   $("status").className = "status" + (kind ? " " + kind : "");
@@ -911,9 +1048,7 @@ function renderTodo(todo) {
 
 /* ---------- 流式请求 ---------- */
 async function sendMessage(text) {
-  streaming = true;
-  sendBtn.disabled = true;
-  input.disabled = true;
+  setStreaming(true);
   addUser(text);
   setStatus("思考中", "busy");
   const typing = el("div", "msg bot");
@@ -923,11 +1058,14 @@ async function sendMessage(text) {
   msgsInner.appendChild(typing);
   scrollBottom();
 
+  let aborted = false;
+  controller = new AbortController();
   try {
     const resp = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
+      signal: controller.signal,
     });
     if (!resp.ok) throw new Error("HTTP " + resp.status);
 
@@ -951,14 +1089,24 @@ async function sendMessage(text) {
     }
   } catch (e) {
     if (typing.parentNode) typing.remove();
-    addError(String(e));
+    if (e.name === "AbortError") {
+      aborted = true;
+      addNote("已停止生成");
+    } else {
+      addError(String(e));
+    }
   } finally {
-    streaming = false;
-    sendBtn.disabled = false;
-    input.disabled = false;
+    controller = null;
+    setStreaming(false);
     input.focus();
-    setStatus("空闲", "");
+    setStatus(aborted ? "已停止" : "空闲", "");
   }
+}
+
+function setStreaming(on) {
+  streaming = on;
+  sendBtn.classList.toggle("stop", on);
+  sendBtn.setAttribute("aria-label", on ? "停止生成" : "发送");
 }
 
 function handleEvent(ev) {
@@ -986,22 +1134,59 @@ function submit() {
   if (!text || streaming) return;
   input.value = "";
   input.style.height = "auto";
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
   sendMessage(text);
 }
 
-sendBtn.addEventListener("click", submit);
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+sendBtn.addEventListener("click", () => {
+  if (streaming) {
+    if (controller) controller.abort();
+    return;
+  }
+  submit();
 });
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && streaming) {
+    if (controller) controller.abort();
+    return;
+  }
+  if (e.key === "Enter" && !e.shiftKey) {
+    // 中文输入法选词时的回车是确认候选，不应发送
+    if (e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    submit();
+  }
+});
+
 input.addEventListener("input", () => {
   input.style.height = "auto";
   input.style.height = Math.min(input.scrollHeight, 150) + "px";
+  try { localStorage.setItem(DRAFT_KEY, input.value); } catch {}
 });
+
+$("toBottom").addEventListener("click", () => {
+  const m = $("msgs");
+  m.scrollTo({ top: m.scrollHeight, behavior: "smooth" });
+});
+
+$("msgs").addEventListener("scroll", updateToBottom, { passive: true });
+
 $("chips").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-c]");
   if (b) { input.value = b.dataset.c; submit(); }
 });
 
+// 刷新后恢复未发送的草稿
+try {
+  const saved = localStorage.getItem(DRAFT_KEY);
+  if (saved) {
+    input.value = saved;
+    input.dispatchEvent(new Event("input"));
+  }
+} catch {}
+
+updateToBottom();
 input.focus();
 </script>
 </body>
