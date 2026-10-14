@@ -83,7 +83,28 @@ def extract_todo(raw):
     return None
 
 
+def json_safe(v):
+    """把任意对象降级成可 JSON 序列化的结构。
+
+    工具的返回值完全由工具自己决定，可能是 bytes（比如 rg 没有匹配到内容时
+    返回的 {"stdout": b"", "stderr": b""}）、set、异常对象之类的东西。
+    在事件流的出口统一处理，避免整条 NDJSON 流挂在 json.dumps 上。
+    """
+    if v is None or isinstance(v, (bool, int, float, str)):
+        return v
+    if isinstance(v, bytes):
+        return v.decode("utf-8", errors="replace")
+    if isinstance(v, (bytearray, memoryview)):
+        return bytes(v).decode("utf-8", errors="replace")
+    if isinstance(v, dict):
+        return {str(k): json_safe(val) for k, val in v.items()}
+    if isinstance(v, (list, tuple, set, frozenset)):
+        return [json_safe(i) for i in v]
+    return str(v)
+
+
 def safe_str(v):
+    v = json_safe(v)
     if isinstance(v, str):
         return v
     if isinstance(v, (dict, list)):
