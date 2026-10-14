@@ -3,55 +3,23 @@ import subprocess
 from pathlib import Path 
 import os
 import json
+from collections import defaultdict
 
 current_dir = Path(__file__).parent
 
-def _func(n,code,f,byte,char):
-    res = f.read(n-byte)
-    return char+len(res.decode(code)),n
 
+def _parse_rg_output(result):
+    # 2026/10/14 14:07:ai生成
+    """把 grep() 返回的元组按路径归类。
 
-def _parse_rg_json(json_text,code):
-    # ai生成，懒得写了,然后按我的需求改了下 2026/10/09 19:18
-    results = []
-    last_path = None
-    f = None
-
-    for line in json_text.splitlines():
-        obj = json.loads(line)
-        if obj["type"] != "match":
-            continue
-        data = obj["data"]
-        path = data["path"]["text"]
-        base = data["absolute_offset"]
-
-        if last_path != path:
-            if f:
-                f.close()
-            f = open(path,mode="rb")
-            temp_byte = 0
-            temp_char = 0
-        
-        for sub in data["submatches"]:
-            d = {}
-            byte_start = base + sub["start"]
-            byte_end = base + sub["end"]
-            char_start,temp_byte = _func(byte_start, code,f,temp_byte,temp_char)
-            temp_char = char_start
-            char_end,temp_byte = _func(byte_end, code,f,temp_byte,temp_char)
-            temp_char = char_end
-
-            d[sub["match"]["text"]] = {
-                "path":path,
-                "char_start":char_start,
-                "char_end":char_end
-            }
-            results.append(d)
-        last_path = path
-
-    f.close()
-    return results
-
+    返回 {路径: [(行号, 匹配文本), ...]}
+    """
+    output = result[0]          # 从 (字符串, 编码) 里取字符串
+    grouped = defaultdict(list)
+    for line in output.strip().split('\n'):
+        path, lineno, match = line.split(':', 2)
+        grouped[path].append((int(lineno)-1, match))
+    return dict(grouped)
 
 def _char_mode(
         path,start,
@@ -146,6 +114,8 @@ def _line_mode(
 {r_text}
 """
 
+
+
 def read_file(
         path,start,
         limit,width,
@@ -162,11 +132,14 @@ def read_file(
 def grep(pattern,path,include=None,encoding="utf-8"):
     args=[
         f"{current_dir}/ripgrep/rg",
-        "--json",
         "--no-config",
+        "-o",
+        "-n",
+        "-H",
         "-e",
         pattern,
     ]
+    sout = ""
     if include:
         args+=["-g",include]
 
@@ -177,13 +150,18 @@ def grep(pattern,path,include=None,encoding="utf-8"):
         capture_output=True
     )
     if res.returncode == 0:
-        return _parse_rg_json(res.stdout.decode(),encoding)
+        sout = _parse_rg_output((res.stdout.decode(),encoding))
 
-    return {"stderr":res.stderr,"stdout":res.stdout,"returncode":res.returncode}
+    return {
+        "stderr":res.stderr.decode(encoding),
+        "stdout":sout,
+        "returncode":res.returncode
+    }
 
 
 
 if __name__ == "__main__":
+    ...
     # print(grep(
     #     "shorin",
     #     "/tmp/readme.txt"
@@ -202,14 +180,33 @@ if __name__ == "__main__":
     #         3,5,10,"char","utf-8",2
     #     )
     # )
-    print(read_file("/tmp/t_big.log", start=0,width=10, limit=29, mode="line",encoding="utf-8",max_char=2000))
+    # print(read_file("/tmp/t_big.log", start=0,width=10, limit=29, mode="line",encoding="utf-8",max_char=2000))
 
-    print(
-        read_file(
-            "/tmp/huge_line.txt",
-            0,3,80,"line","utf-8",2000
-        )
-    )
+    # print(
+    #     read_file(
+    #         "/tmp/huge_line.txt",
+    #         0,3,80,"line","utf-8",2000
+    #     )
+    # )
+    # from collections import defaultdict
+
+
+    # def parse_rg_output(result):
+    #     """把 grep() 返回的元组按路径归类。
+
+    #     返回 {路径: [(行号, 匹配文本), ...]}
+    #     """
+    #     output = result[0]          # 从 (字符串, 编码) 里取字符串
+    #     grouped = defaultdict(list)
+    #     for line in output.strip().split('\n'):
+    #         path, lineno, match = line.split(':', 2)
+    #         grouped[path].append((int(lineno), match))
+    #     return dict(grouped)
+
+    # o = parse_rg_output(grep("十","/home/xuanyansx/tmp/cg","text*"))
+    # print(
+    #     o
+    # )
 
 
 

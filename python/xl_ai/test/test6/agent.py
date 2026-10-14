@@ -401,7 +401,9 @@ class TestTool:
             encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
         ):
         """
-        ripgrep为内核的grep工具，返回匹配的词在整个文件的字符位置
+        ripgrep为内核的grep工具
+        返回匹配字符的前一个行号
+        配合read_range工具使用更佳
         
         """
         return grep(pattern,path,include,encoding)
@@ -1078,6 +1080,8 @@ if __name__ == "__main__":
     # except Exception as e:
     #     print(f"{e}")
     print("debug")
+    T = TestTool()
+    print(T.tgrep("十","/home/xuanyansx/tmp/cg/text"))
     ...
 
 
