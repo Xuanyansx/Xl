@@ -4,12 +4,13 @@ from pathlib import Path
 import os
 import json
 from collections import defaultdict
+import _custom_structs as cs 
 
 current_dir = Path(__file__).parent
 
 
 def _parse_rg_output(result):
-    # 2026/10/14 14:07:ai生成
+    # 2026/10/14 14:07:ai生成,按需求做了小修改
     """把 grep() 返回的元组按路径归类。
 
     返回 {路径: [(行号, 匹配文本), ...]}
@@ -31,6 +32,7 @@ def _char_mode(
     end_text = ""
     err_text = ""
 
+
     if num_chars>max_char:
         num_chars=max_char
         err_text = f"「内容超过{max_char}char，已被截断」"
@@ -48,6 +50,8 @@ def _char_mode(
                 :100
             ]
     end_text = f"↳ 「断行续接」（此内容是预览性质）：\n{end_line}"
+
+    
 
     return f"""
 
@@ -152,11 +156,11 @@ def grep(pattern,path,include=None,encoding="utf-8"):
     if res.returncode == 0:
         sout = _parse_rg_output((res.stdout.decode(),encoding))
 
-    return {
-        "stderr":res.stderr.decode(encoding),
-        "stdout":sout,
+    return f"""
+stderr:{res.stderr.decode(encoding)},
+        "stdout":{sout},
         "returncode":res.returncode
-    }
+    """
 
 
 

@@ -358,32 +358,7 @@ class TestTool:
         max_char = 2000
         
         #暂时这样定义配置吧 2026/10/10 10:38:
-        a_text = ""
 
-        with open(path, encoding=encoding) as f:
-            text = f.read()
-
-        if start<0 or start>len(text):
-            raise ValueError(f"非法参数 start：{start}，应小于等于文件长度：{len(text)}")
-
-        if limit<0:
-            raise ValueError(f"非法参数limit:{limit}")
-
-        if width <= 0:
-            raise ValueError(f"width:{width} 太小了")
-
-        sy = len(text)-(start+limit*width)
-        after = sy/width
-        after = math.ceil(after)
-
-        if after <0 :
-            after = 0
-
-        if mode.lower() == "char":
-            a_text = f"""
-后面还有{after}页，width为{width}
-剩余页数仅在保持 width 不变时有效
-"""
 
         return read_file(
             path,
@@ -391,7 +366,7 @@ class TestTool:
             width,mode,
             encoding,
             max_char=max_char
-        )+a_text
+        )
     
     def tgrep(
             self,
