@@ -332,9 +332,15 @@ class TestTool:
     def read_range(
             self,
             path:Annotated[str,"文件路径"],
-            start:Annotated[int,"从多少字符开始"],
-            limit:Annotated[int,"往后读多少页/行"],
+            start:Annotated[int,"""
+读取起点，按 mode 解释，都是 1 基：
+- char 模式：第几个字符（不是字节）。0 或负数等同于 1。
+- line 模式：第几行，行号从 1 开始。0 或负数等同于第 1 行。
+
+            """],
+            page:Annotated[int,"往后读多少页,默认1，line模式无效"]=1,
             width:Annotated[int,"一页有多少字符，默认80,单位字符，line模式无效"]=80,
+            lines:Annotated[int,"往后读多少行,默认1，char模式无效"]=1,
             mode:Literal["char","line"]="char",
             encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
         ):
@@ -343,12 +349,17 @@ class TestTool:
     本质是文本读取工具，不要读取二进制文件
 
     mode：
-    选择模式，默认是char模式
+    选择模式，默认 char。
+    - char：按字符分页，每页 width 个字符，遇到行尾会补完整行（因此实际可能超出 width）。
+    返回的 next 是下一页起点（1 基字符位置，可直接回填 start）。
+    - line：按行读取，从 start 行开始取 limit 行，输出带 1 基行号。
+
 
     char模式：
     按「字符宽度」把文件分块（分页）只读，不改动文件也不重排内容；
-    返回本页文本、下次起始、以及剩余页数。
-    被 width 截断的行会以「断行续接」单列，原文不丢。
+    返回本页文本、下次起始等内容
+    主意！当本行内容被截断会补全本行并加入本页
+    
 
     line模式：
     按「行」来读
@@ -356,24 +367,37 @@ class TestTool:
         
         """
         max_char = 2000
+        info_text = ""
         
         #暂时这样定义配置吧 2026/10/10 10:38:
 
 
-        return read_file(
+        content,info,finished = read_file(
             path,
-            start,limit,
+            start,(page,lines),
             width,mode,
             encoding,
             max_char=max_char
         )
+
+        for name,text in info:
+            info_text+=f"# {name}:{text}\n"
+
+        return f"""
+<content>
+{content}
+</content>
+# finished:{finished}
+{info_text}
+"""
+    
+        
     
     def tgrep(
             self,
             pattern:Annotated[str,"ripgrep风格的正则"],
             path:Annotated[str,"路径"],
             include:Annotated[str,"glob表达式,默认为None"]=None,
-            encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
         ):
         """
         ripgrep为内核的grep工具
@@ -381,9 +405,28 @@ class TestTool:
         配合read_range工具使用更佳
         
         """
-        return grep(pattern,path,include,encoding)
-        
+        res,err = grep(pattern,path,include)
+        content = ""
 
+        if res:
+            keys = list(res.keys())
+
+            for i in keys:
+                content+=f"[{i}]\n<content>\n"
+                hit = res[i]['hit']
+                lines = res[i]['lines']
+                for line,text in res[i]['match']:
+                    content+=f"{line}:{text}\n"
+                content+=f"</content>\n# hit:{hit}\n#lines:{lines}"
+
+        if err:
+            content += f"<error>\n{err['err']}</error>"
+
+
+        
+        return content
+
+            
 class DefaultTools:
     def __init__(self):
         self._tools = [
@@ -1056,7 +1099,8 @@ if __name__ == "__main__":
     #     print(f"{e}")
     print("debug")
     T = TestTool()
-    print(T.tgrep("十","/home/xuanyansx/tmp/cg/text"))
+    
+    print(T.tgrep("def", "/home/xuanyansx/Desktop/deepseek-agent/data/tmp/repro/dup/multi.txt"))
     ...
 
 

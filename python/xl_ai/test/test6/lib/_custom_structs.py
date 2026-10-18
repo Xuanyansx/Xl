@@ -9,7 +9,8 @@ class ReadReturn:
     err_text:str = ""
     end_text:str = ""
 
+@dataclass
 class GrepReturn:
-    stderr:str
-    stdout:str
+    content:list
+    err_text:list = field(default_factory=list)
     
