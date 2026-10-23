@@ -387,7 +387,6 @@ class TestTool:
 <content>
 {content}
 </content>
-# finished:{finished}
 {info_text}
 """
     
@@ -398,26 +397,27 @@ class TestTool:
             pattern:Annotated[str,"ripgrep风格的正则"],
             path:Annotated[str,"路径"],
             include:Annotated[str,"glob表达式,默认为None"]=None,
+            max_count:Annotated[str,"最大输出行数，默认None"]=None
         ):
         """
-        ripgrep为内核的grep工具
-        返回匹配字符的前一个行号
-        配合read_range工具使用更佳
-        
+        ripgrep为内核的grep文本搜索工具
+        返回匹配的行与行号
+  
         """
-        res,err = grep(pattern,path,include)
+        max_columns = 100
+        res,err = grep(max_columns,pattern,path,include,max_count)
         content = ""
+        # 2026/10/22 13:58:暂时这样定义，没有设计好配置文件导致的，下个版本改，先跑起来再说
 
         if res:
             keys = list(res.keys())
 
             for i in keys:
                 content+=f"[{i}]\n<content>\n"
-                hit = res[i]['hit']
                 lines = res[i]['lines']
                 for line,text in res[i]['match']:
                     content+=f"{line}:{text}\n"
-                content+=f"</content>\n# hit:{hit}\n#lines:{lines}"
+                content+=f"</content>\n#lines:{lines}\n\n"
 
         if err:
             content += f"<error>\n{err['err']}</error>"
@@ -524,6 +524,8 @@ class DefaultTools:
         res = "没有这个工具"
         if name in self.ctools:
             res = self.ctools[name][0](**args)
+
+
         return res
 
     
