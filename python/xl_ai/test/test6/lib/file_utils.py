@@ -83,15 +83,16 @@ def _new_line(path,start,lines,offset,encoding,max_char,info):
                 line = line[:max_char-usage]
                 c = len(line) if i!=start else len(line)+offset
 
-                info+=[(
-                    "warning",
-                    f"第{i}行截断,本行还剩{l-len(line)字符}"
-                ),
-                (
-                    'info',
-                    f"start={i} offset={c}可取到截断行后的内容"
-                )
-                ]
+                if l-len(line)-1!=0:
+                    info+=[(
+                        "warning",
+                        f"第{i}行截断{'' if c==0 else f',本行还剩{l-len(line)-1}字符'}"
+                    ),
+                    (
+                        'info',
+                        f"start={i} {'' if c==0 else f' offset={c}'}可取到截断行后的内容"
+                    )
+                    ]
                 jd = True
 
             usage+=len(line)
@@ -103,24 +104,8 @@ def _new_line(path,start,lines,offset,encoding,max_char,info):
     return content,info,finished
 
 
-def read_file(
-        path,start,
-        unit,width,
-        mode,encoding,
-        max_char
-        ):
-    start-=1
 
-    if start<1:
-        start = 0
-    
-    if mode=="char":
-        return _char_mode(path,start,unit[0],width,encoding,max_char)
-        
-    return _line_mode(path,start,unit[1],width,encoding,max_char)
-
-
-def read_file2(path,start,lines,offset,encoding,max_char):
+def read_file(path,start,lines,offset,encoding,max_char):
     info = []
     
     if start<1:
@@ -178,9 +163,9 @@ def grep(max_columns,pattern,path,include=None,max_count=None):
 
 if __name__ == "__main__":
     print("debug")
-    f = read_file2("/tmp/rt/empty.txt",1,100,10,'utf-8',8000)
-    print(f)
-    f1 = read_file2("/home/xuanyansx/a.txt",2,1,2,'utf-8',2)
+    # f = read_file("/tmp/rt/empty.txt",1,100,10,'utf-8',8000)
+    # print(f)
+    f1 = read_file("/home/xuanyansx/install.log",1,0,0,'utf-8',1000)
     print(f1)
-    f2 = read_file2("/home/xuanyansx/a.txt",5,1,4,'utf-8',2)
+    f2 = read_file("/home/xuanyansx/a.txt",5,1,4,'utf-8',2)
     print(f2)

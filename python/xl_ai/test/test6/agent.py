@@ -333,9 +333,9 @@ class TestTool:
     def read(
         self,
         path: Annotated[str,"要读取的文件路径"],
-        start: Annotated[int,"起始行号（从 1 开始）"],
+        start_line: Annotated[int,"起始行号（从 1 开始）"],
         lines: Annotated[int,"从start行开始读取的行数；0表示读到文件末尾"],
-        offset: Annotated[int,"在start行内从行首跳过的字符数，默认0"] = 0,
+        skip_chars: Annotated[int,"start_line行内过的字符数，默认0"] = 0,
         encoding: Annotated[str,"文件字符编码，默认 utf-8"] = 'utf-8',
         max_char:Annotated[int,"最大输出字符数量，最大为15000默认为8000"] = 8000
     ):
@@ -355,11 +355,11 @@ class TestTool:
         if max_char>MAX_CHAR:
             raise ValueError(f"max_char:{max_char}太大")
 
-        content,info,finished = fu.read_file2(
+        content,info,finished = fu.read_file(
             path,
-            start,
+            start_line,
             lines,
-            offset,
+            skip_chars,
             encoding,
             max_char
         )
@@ -1089,7 +1089,7 @@ if __name__ == "__main__":
     print(
         T.read(
             path="/home/xuanyansx/app.log",
-            start=0,
+            start_line=0,
             lines=30
         )
     )    
