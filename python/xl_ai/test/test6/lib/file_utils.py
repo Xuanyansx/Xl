@@ -35,79 +35,72 @@ def _parse_rg_output(jsons,max_columns):
     return res
 
 
-def _char_mode(
-        path,start,
-        page,width,
-        encoding,
-        max_char
-    ):
-    num_chars = page*width
-
-    content = ""
-    info = []
-
-    with open(path,mode="r",encoding=encoding,errors="replace") as f:
-        f.read(start)
-        body_text = f.read(num_chars)
-        end_line = f.readline()
-        next_line = f.readline()
-
-    if len(end_line)+num_chars>max_char+100:
-        end_line = end_line[:100]
-        info.append(
-            ("info","超出预设范围，行补全仅展示100字符")
-        )
-    finished = len(body_text) < num_chars or next_line == ""
-    info+=[
-        ('next',
-         num_chars+start+len(end_line)+1
-         if not finished else "null"
-         ),
-        ('本次读取字符数',len(body_text+end_line)),
-        ('行补全字数',len(end_line))
-    ]
-    content+=body_text+end_line
-
-    return content,info,finished
 
 
-def _line_mode(
-        path,start,
-        page,width,
-        encoding,
-        max_char
-    ):
+def _new_line(path,start,lines,offset,encoding,max_char,info):
+    content = ''
 
     usage = 0
-    content = ""
-    info = []
-    finished = False
-    
-    with open(path,mode="r",encoding=encoding,errors="replace") as f:
-        temp = 0
-        for i in range(start+page) :
 
-            if i <start:
-                temp = len(f.readline())
+    finished = True
+    jd = False
+
+    i = 0
+    
+    with open(path,"r",encoding=encoding,errors='replace') as f:
+
+        while True:
+            i+=1
+            if i<start:
+                if f.readline() == "":
+                    info.append(("warning", f"start:{start} 超出文件行数(共{i-1}行)"))
+                    return content, info, False
                 continue
 
+            if i==lines+start and lines!=0 or jd:
+                break
+
             line = f.readline()
-            if line == "":
-                finished = True
+            prefix = f"{i}:"    
+
+            if line=="":
                 break
-            line=f"{i+1}:{line}"
+
+            if i==start:
+                line = line[offset:]
+
+            if line == "" and i==start:
+                info+=[
+                    ("warning",
+                    f"{start}行，offset:{offset}越界")
+                ]
+                continue
+
+
+            
             if len(line)+usage>max_char:
-                content+=line[:max_char-usage]
+                l = len(line)
+                line = line[:max_char-usage]
+                c = len(line) if i!=start else len(line)+offset
 
-                info.append((
+                info+=[(
                     "warning",
-                    f"第{i+1}行超出字符限制已暂停读取,建议用char 模式 start={temp+len(content) if temp+len(content) else 0}"
-                ))
-                break
-            usage+=len(line)
-            content+=line
-    return content,info,finished
+                    f"第{i}行截断,本行还剩{l-len(line)字符}"
+                ),
+                (
+                    'info',
+                    f"start={i} offset={c}可取到截断行后的内容"
+                )
+                ]
+                jd = True
 
+            usage+=len(line)
+            content+=prefix+line
+
+        if f.readline() == "":
+            finished = False
+            
+    return content,info,finished
 
 
 def read_file(
@@ -125,6 +118,29 @@ def read_file(
         return _char_mode(path,start,unit[0],width,encoding,max_char)
         
     return _line_mode(path,start,unit[1],width,encoding,max_char)
+
+
+def read_file2(path,start,lines,offset,encoding,max_char):
+    info = []
+    
+    if start<1:
+        info+=[
+            ("warning",
+            f"start:{start}非法，以替换为1")
+        ]
+        start = 1
+
+
+    if lines<0:
+        raise ValueError(f"lines:{lines} 值非法")
+
+
+
+    return _new_line(path,start,lines,offset,encoding,max_char,info)
+    
+
+        
+
 
 
 def grep(max_columns,pattern,path,include=None,max_count=None):
@@ -162,4 +178,9 @@ def grep(max_columns,pattern,path,include=None,max_count=None):
 
 if __name__ == "__main__":
     print("debug")
-    f = read_file("/home/xuanyansx/a.txt",500,(2,2),80,"char","utf-8",2000)
+    f = read_file2("/tmp/rt/empty.txt",1,100,10,'utf-8',8000)
+    print(f)
+    f1 = read_file2("/home/xuanyansx/a.txt",2,1,2,'utf-8',2)
+    print(f1)
+    f2 = read_file2("/home/xuanyansx/a.txt",5,1,4,'utf-8',2)
+    print(f2)

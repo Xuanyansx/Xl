@@ -5,13 +5,13 @@ import inspect
 import tiktoken
 from openai import OpenAI
 import custom_structs as st
+import lib.file_utils as fu
 from datetime import datetime
 from collections import deque
 from pydantic import BaseModel
 from memory.manager import Archive,MemoryTool
 from xl_mcp.mcp_cs import xlmcp_client
 from typing import Annotated,Literal,get_type_hints
-from lib.file_utils import read_file,grep
 # import logging
 
 
@@ -288,8 +288,7 @@ class Todo:
         )
         return res
         
-    
-    
+
 
 class TestTool:
     def __init__(self):
@@ -329,57 +328,43 @@ class TestTool:
             )
         return {"stderr":res.stderr,"stdout":res.stdout,"returncode":res.returncode}
 
-    def read_range(
-            self,
-            path:Annotated[str,"文件路径"],
-            start:Annotated[int,"""
-读取起点，按 mode 解释，都是 1 基：
-- char 模式：第几个字符（不是字节）。0 或负数等同于 1。
-- line 模式：第几行，行号从 1 开始。0 或负数等同于第 1 行。
 
-            """],
-            page:Annotated[int,"往后读多少页,默认1，line模式无效"]=1,
-            width:Annotated[int,"一页有多少字符，默认80,单位字符，line模式无效"]=80,
-            lines:Annotated[int,"往后读多少行,默认1，char模式无效"]=1,
-            mode:Literal["char","line"]="char",
-            encoding:Annotated[str,"编码，默认utf-8"]="utf-8"
-        ):
-        
-        """
-    本质是文本读取工具，不要读取二进制文件
-
-    mode：
-    选择模式，默认 char。
-    - char：按字符分页，每页 width 个字符，遇到行尾会补完整行（因此实际可能超出 width）。
-    返回的 next 是下一页起点（1 基字符位置，可直接回填 start）。
-    - line：按行读取，从 start 行开始取 limit 行，输出带 1 基行号。
-
-
-    char模式：
-    按「字符宽度」把文件分块（分页）只读，不改动文件也不重排内容；
-    返回本页文本、下次起始等内容
-    主意！当本行内容被截断会补全本行并加入本页
     
-
-    line模式：
-    按「行」来读
-    返回文本内容，超出最大范围会被截断
-        
+    def read(
+        self,
+        path: Annotated[str,"要读取的文件路径"],
+        start: Annotated[int,"起始行号（从 1 开始）"],
+        lines: Annotated[int,"从start行开始读取的行数；0表示读到文件末尾"],
+        offset: Annotated[int,"在start行内从行首跳过的字符数，默认0"] = 0,
+        encoding: Annotated[str,"文件字符编码，默认 utf-8"] = 'utf-8',
+        max_char:Annotated[int,"最大输出字符数量，最大为15000默认为8000"] = 8000
+    ):
         """
-        max_char = 2000
+        本质是文本读取工具，不要读取二进制文件
+        当发生截断时，建议用偏移量继续续读
+
+        返回带行号的文本
+
+        """
+
+
         info_text = ""
-        
-        #暂时这样定义配置吧 2026/10/10 10:38:
+        # 暂时这样定义配制吧  2026/10/24 15:19
 
+        MAX_CHAR = 32000
+        if max_char>MAX_CHAR:
+            raise ValueError(f"max_char:{max_char}太大")
 
-        content,info,finished = read_file(
+        content,info,finished = fu.read_file2(
             path,
-            start,(page,lines),
-            width,mode,
+            start,
+            lines,
+            offset,
             encoding,
-            max_char=max_char
+            max_char
         )
 
+            
         for name,text in info:
             info_text+=f"# {name}:{text}\n"
 
@@ -387,11 +372,10 @@ class TestTool:
 <content>
 {content}
 </content>
+# next_line:{finished}
 {info_text}
 """
-    
-        
-    
+            
     def tgrep(
             self,
             pattern:Annotated[str,"ripgrep风格的正则"],
@@ -405,7 +389,7 @@ class TestTool:
   
         """
         max_columns = 100
-        res,err = grep(max_columns,pattern,path,include,max_count)
+        res,err = fu.grep(max_columns,pattern,path,include,max_count)
         content = ""
         # 2026/10/22 13:58:暂时这样定义，没有设计好配置文件导致的，下个版本改，先跑起来再说
 
@@ -1101,9 +1085,15 @@ if __name__ == "__main__":
     #     print(f"{e}")
     print("debug")
     T = TestTool()
-    
-    print(T.tgrep("def", "/home/xuanyansx/Desktop/deepseek-agent/data/tmp/repro/dup/multi.txt"))
-    ...
+
+    print(
+        T.read(
+            path="/home/xuanyansx/app.log",
+            start=0,
+            lines=30
+        )
+    )    
+
 
 
 
