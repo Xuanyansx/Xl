@@ -47,7 +47,7 @@ def _new_line(path,start,lines,offset,encoding,max_char,info):
 
     i = 0
     
-    with open(path,"r",encoding=encoding,errors='replace') as f:
+    with open(path,"r",encoding=encoding,errors='replace',newline="") as f:
 
         while True:
             i+=1
@@ -105,7 +105,7 @@ def _new_line(path,start,lines,offset,encoding,max_char,info):
 
 
 
-def read_file(path,start,lines,offset,encoding,max_char):
+def base_read_file(path,start,lines,offset,encoding,max_char):
     info = []
     
     if start<1:
@@ -115,20 +115,11 @@ def read_file(path,start,lines,offset,encoding,max_char):
         ]
         start = 1
 
-
-    if lines<0:
-        raise ValueError(f"lines:{lines} 值非法")
-
-
-
     return _new_line(path,start,lines,offset,encoding,max_char,info)
     
+     
 
-        
-
-
-
-def grep(max_columns,pattern,path,include=None,max_count=None):
+def base_grep(max_columns,pattern,path,include=None,max_count=None):
     args=[
         f"{current_dir}/ripgrep/rg",
         "--no-config",
@@ -161,11 +152,54 @@ def grep(max_columns,pattern,path,include=None,max_count=None):
     return res,err
 
 
+def base_write_file(path,text,mode,encoding):
+    with open(path,mode,encoding=encoding,newline="") as f:
+        f.write(text)
+    return 'Updated file'
+
+def base_edit_file(path,old_string,new_string,replace,encoding):
+    content = ''
+    info = ''
+
+    if old_string=='':
+        raise ValueError(f"old_string为空")
+
+    with open(path,'r',encoding=encoding,newline="") as f:
+        file_text = f.read()
+        i = file_text.find(old_string)
+        
+        if i==-1:
+            return f'无匹配'
+        
+        if file_text.find(
+            old_string,
+            i+len(old_string)
+            )>0 and not replace:
+            return f'错误，存在多处匹配'
+
+        if replace:
+            content = file_text.replace(old_string,new_string)
+            info = f'编辑成功,替换{file_text.count(old_string)}处'
+        
+        else:
+            head = file_text[:i]
+            tail = file_text[i+len(old_string):]
+            content = head+new_string+tail
+            info = f'编辑成功'
+
+
+    with open(path,'w',encoding=encoding,newline="") as f:
+        f.write(content)
+
+    return info
+                
+
+
 if __name__ == "__main__":
     print("debug")
     # f = read_file("/tmp/rt/empty.txt",1,100,10,'utf-8',8000)
     # print(f)
-    f1 = read_file("/home/xuanyansx/install.log",1,0,0,'utf-8',1000)
+    f1 = base_read_file("/home/xuanyansx/install.log",1,0,0,'utf-8',1000)
     print(f1)
-    f2 = read_file("/home/xuanyansx/a.txt",5,1,4,'utf-8',2)
+    f2 = base_read_file("/home/xuanyansx/a.txt",5,1,4,'utf-8',2)
     print(f2)

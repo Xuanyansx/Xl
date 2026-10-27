@@ -312,32 +312,36 @@ class TestTool:
     
     def run_shell(
         self,
-        cmd:Annotated[str,"shell执行的命令"]
+        cmd:Annotated[str,"shell执行的命令"],
+        timeout:Annotated[int,"超时时间，默认None"]=None
         ):
         """
         使用系统的shell执行命令，
         底层实现是subprocess.run，
-        不要执行会阻塞程序的命令
+        执行耗时长的任务记得设置timeout
+
+        尽量不要用shell命令读取大文件，除非内置文本读取工具无法做到
         """
         import subprocess
         res = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            shell=True
+            shell=True,
+            timeout=timeout
             )
         return {"stderr":res.stderr,"stdout":res.stdout,"returncode":res.returncode}
 
 
     
-    def read(
+    def read_file(
         self,
         path: Annotated[str,"要读取的文件路径"],
         start_line: Annotated[int,"起始行号（从 1 开始）"],
         lines: Annotated[int,"从start行开始读取的行数；0表示读到文件末尾"],
         skip_chars: Annotated[int,"start_line行内过的字符数，默认0"] = 0,
         encoding: Annotated[str,"文件字符编码，默认 utf-8"] = 'utf-8',
-        max_char:Annotated[int,"最大输出字符数量，最大为15000默认为8000"] = 8000
+        max_char:Annotated[int,"最大输出字符数量，最大为32000默认为8000"] = 8000
     ):
         """
         本质是文本读取工具，不要读取二进制文件
@@ -354,8 +358,11 @@ class TestTool:
         MAX_CHAR = 32000
         if max_char>MAX_CHAR:
             raise ValueError(f"max_char:{max_char}太大")
-
-        content,info,finished = fu.read_file(
+        
+        if lines<0:
+            raise ValueError(f"lines:{lines} 值非法")
+        
+        content,info,finished = fu.base_read_file(
             path,
             start_line,
             lines,
@@ -389,7 +396,7 @@ class TestTool:
   
         """
         max_columns = 100
-        res,err = fu.grep(max_columns,pattern,path,include,max_count)
+        res,err = fu.base_grep(max_columns,pattern,path,include,max_count)
         content = ""
         # 2026/10/22 13:58:暂时这样定义，没有设计好配置文件导致的，下个版本改，先跑起来再说
 
@@ -407,7 +414,50 @@ class TestTool:
             content += f"<error>\n{err['err']}</error>"
         return content
 
-            
+    def edit_file(
+            self,
+            path:Annotated[str,'文件路径'],
+            old_string:Annotated[str,'字面文本,精确匹配'],
+            new_string:Annotated[str,'替换文本,空字符串即删除该段'],
+            replace:Annotated[bool,'布尔,默认 false;true 则替换全部匹配']=False,
+            encoding:Annotated[str,'编码,默认UTF-8']='utf-8'
+        ):
+        """
+        编辑一个文件，将old_string替换为new_string
+        
+        """
+
+        res = fu.base_edit_file(
+            path,
+            old_string,
+            new_string,
+            replace,
+            encoding
+        )
+        return res
+
+    def write_file(
+            self,
+            path:Annotated[str,"文件路径"],
+            text:Annotated[str,"写入的文本"],
+            mode:Literal["w","a"],
+            encoding:Annotated[str,"编码"]='utf-8'
+        ):
+        """
+        创建或者写入一个文件
+        mode为w，当文件存在时清空内容写入，文件不存创建并写入
+        mode为a时为追加模式，在文件末尾追加内容
+        """
+
+
+        res = fu.base_write_file(
+            path,
+            text,
+            mode,
+            encoding
+        )
+        return res
+        
 class DefaultTools:
     def __init__(self):
         self._tools = [
@@ -1084,7 +1134,7 @@ if __name__ == "__main__":
     T = TestTool()
 
     print(
-        T.read(
+        T.read_file(
             path="/home/xuanyansx/app.log",
             start_line=0,
             lines=30
