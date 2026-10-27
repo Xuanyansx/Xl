@@ -405,9 +405,6 @@ class TestTool:
 
         if err:
             content += f"<error>\n{err['err']}</error>"
-
-
-        
         return content
 
             
@@ -878,7 +875,7 @@ class MessageManager:
                 st.Message(
                     # LLM.count_tokens(msg),
                     msg,
-                    role="inner_system"
+                    role="prompt"
                 )
             )
             return False
