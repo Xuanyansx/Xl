@@ -1,0 +1,16 @@
+# Python 小片段
+```python
+import re
+
+def grep_files(pattern, paths):
+    """按正则筛选文本，返回命中的 (path, lineno, line)"""
+    rx = re.compile(pattern)
+    hits = []
+    for p in paths:
+        with open(p, encoding="utf-8") as f:
+            for i, line in enumerate(f, 1):
+                if rx.search(line):
+                    hits.append((p, i, line.rstrip()))
+    return hits
+```
+- 关键词：Python、正则、grep、代码片段

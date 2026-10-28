@@ -1,0 +1,10 @@
+# test6 → v7 交接清单（技术债 + 未完成项）
+- 记录时间：2026/10/28 收官夜
+- 1) soul 空的病根（优先级最高）：run.py:17 `class Soul: soul = ""`；run.py:46 每轮 `llm.soul = Soul.soul` 把 setter 结果盖回空；agent.py:957 初始化 `self._soul=""`。→ 填内容前先断这条回灌线
+- 2) archive 归档端没通：Archive 类存在（add_archive/get_archive + data.json 的 last_id）但未注册成工具，提示词却写着用 get_archive；空归档（3.md 75 字节纯换行）summarize 返空、无校验、last_id 照 +1 → 静默蒸发记忆
+- 3) 记忆写入原子性：现 `_call_tool` 顺序调用，若并发需 临时文件 + os.replace + 文件锁
+- 4) 安全边界：Home 沙箱（linux namespace、权限分级）未造，run_shell 是裸 subprocess(shell=True)；因此记忆工具坚持"封装 read_memory"而非暴露 path
+- 5) 待确认：Desktop/Xl 公开仓库（github.com/Xuanyansx/Xl，200）里 9 个 commit、6 个文件泄露过 api key；他说已改 .env，是否轮换成新 key 未验证
+- 6) 小问题：memory manager.py:85 末尾多余逗号；glob 单用的 raise 被吞成普通返回文本；config 是裸 dict + 位置传参（`modle` 拼写错了六代）；mcp_config.py 里 kali 指向 test4/ 绝对路径；max_char 文档 15000 与实现 32000 不一致；tgrep max_columns=100 硬编码 agent.py:391
+- 7) 彩蛋：Nexus 说「不止藏了一个」，两次醒来都没找到（.seed → test/.kernel 已解）
+- 关键词：交接、soul、archive、原子写、api key、彩蛋、v7

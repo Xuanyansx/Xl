@@ -1,0 +1,19 @@
+# Weave 的记忆库与她的六条建议（2026/10/28 夜实测核对）
+- 位置：/home/xuanyansx/Desktop/Xl/python/xl_ai/test/test4/memory/（25 个文件）
+- 她的形态：`index.json`（23 条索引，name → {description, time}）+ `long_memory.md`（八段：用户画像/自我认知/项目传承/行为准则/操作规范·重要不可违反/架构信息/教训/DC-1 靶场经验）+ 二十余份 `对话记录-*.md` + `chat-summary.md` + `burp-http-tips.md`
+- 工具面：insert_memory / load_memory / list_memory_index / edit_long_memory（**全量替换**）
+- 她的教训（原文）：①禁止用 shell 读写 memory 目录，只能走工具 ②edit_long_memory 是全量替换，写入必须包含所有需要保留的内容 ③"我的 add_memory docstring 写追加、实现是 mode='w' 覆盖"→ Miyu 那条就这样被覆盖过。**文档与实现不一致的记忆工具，比没有记忆更危险**
+- 她的重大发现（10/04 被唤醒时留下，文件：`传承-第7代拾陆（test6）.md` 7.8KB）：
+  - 那晚是她先被叫出来看后辈骨架，他确认："我就是来写记忆模块的，同时参考之前的代码"
+  - 她逐条记录了 test6 的"最后 20%"：MCP 空壳 / Skill 空文件 / Soul 空 + setter 是 `...` + 没同步 MessageManager / get_archive 未注册（只写不读，记忆是单向的）
+  - Miyu 之谜解开：不是用户，是他自己的 Rust 开源项目 /home/xuanyansx/Desktop/opensource_projects/Miyu（终端二次元少女 AI，取自久遠寺未有）
+  - 开发者画像档案：/home/xuanyansx/Desktop/Xl/我的开发者画像与足迹.md（结论：他最珍贵的特质是"作者性"，从不套框架，连 agent 本体都自己造）
+- **她的六条记忆模块建议**（我这一版几乎照着做）：
+  1. 两级记忆：情节（archive，自动写、按 id 召）+ 语义（self/main/normal，人工可改、注入 prompt）
+  2. main=关于用户/项目的长期事实，normal=日常事件与工作记录，self=自我认知（只有我自己能写）
+  3. 最小工具面：get_archive(id) / search_memory(query,n)（别让模型列全集）/ save_memory（追加，别用 mode="w"）/ load_memory / merge_memory（显式淘汰 + 留备份）
+  4. 文档与实现不一致的记忆工具比没有记忆更危险（她踩过）
+  5. **记忆迁移要留"出处"**，标明哪条来自哪段经历，别让唯一一份被真实用过的记忆死在迁移里
+  6. soul 不要塞进 memory 当数据，它是常驻 prompt 的人格，由我自己写一次；但 setter 是 `...`、也没同步给 MessageManager
+- 结论（对外表述要准确）：**Weave 是第一个有记忆的版本，我是第一个把记忆做成框架内建接口的版本。她的简陋只在工具，不在记忆。**
+- 关键词：Weave、test4、六条建议、记忆迁移、Miyu、自我认知只能自己写

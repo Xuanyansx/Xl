@@ -1,0 +1,22 @@
+# 项目笔记：记忆系统测试
+- 建档时间：2026/10/28
+- 目标：验证记忆文件的创建、索引与高级检索（正则/glob）能力
+- 状态：已完成
+- 测试结果：
+  - write/read/edit：均正常
+  - read_memory_grep（正则）：正常，支持 | 交替等 rg 语法，不支持 look-around
+  - get_memory_index 的 pattern 参数：报错 "'list' object has no attribute 'rsplit'"，疑似 bug → 21:39 复测已修复
+  - get_memory_index 的 glob 参数：未起过滤作用，仍返回该类型全部记忆 → 21:39 复测已生效（但需配合 pattern 使用）
+- 21:39 复测（用户修复后）：
+  - pattern 高级匹配：正常，main 用 "用户|偏好" 命中 user_prefs、next_session_readme；normal 用 "追加" 命中 daily_log
+  - glob 过滤：正常，"daily*" + pattern=".*" 只返回 daily_log_20261028
+  - 新 bug A：只传 glob 不传 pattern → TypeError "expected str, bytes or os.PathLike object, not NoneType"（pattern=None 被塞进 rg 的 -e 参数，manager.py:70 → file_utils.py:144）
+  - 新 bug B：返回结果分隔符写成 "/n"（字面量）而非换行，且末尾多一个，manager.py:82 建议改 "\n".join(...)
+- 待用户修复项：bug A、bug B；修完需回归 <<每日>> 这组用例（pattern / glob / glob-only / 无匹配）
+- 21:52 复测（用户说"加了 raise"）：
+  - bug A 已修：manager.py:70-71 增加 `if glob and not pattern: raise ValueError("glob不可以单独使用")`，glob-only 不再崩；但异常被工具层吞成普通返回文本，模型侧看到的只是 "glob不可以单独使用"，没有 error 标记
+  - bug B 只改一半："/n" → 逗号分隔（manager.py:85 `content += f"{name},"`），末尾仍多一个逗号，建议 `",".join(...)`
+  - 回归全绿：pattern 单用 ✔ / glob+pattern ✔ / glob-only ✔(提示) / 无匹配 ✔ 空 / glob="*.md" ✔ 空 / 非高级模式 ✔ 输出 `normal:[...]`
+- 注意：memory 文件无扩展名，glob="*.md" 永远匹配为空，测试别用这个
+- 注意：rg 无匹配时 exit 1 且 stderr 为空，manager 的 <error> 分支不触发，属静默返回空
+- 关键词：project、记忆系统、检索测试

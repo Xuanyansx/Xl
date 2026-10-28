@@ -106,6 +106,16 @@ def _new_line(path,start,lines,offset,encoding,max_char,info):
 
 
 def base_read_file(path,start,lines,offset,encoding,max_char):
+    
+    # 暂时这样定义配制吧  2026/10/24 15:19
+
+    MAX_CHAR = 32000
+    if max_char>MAX_CHAR:
+        raise ValueError(f"max_char:{max_char}太大")
+    
+    if lines<0:
+        raise ValueError(f"lines:{lines} 值非法")
+    
     info = []
     
     if start<1:
@@ -119,7 +129,13 @@ def base_read_file(path,start,lines,offset,encoding,max_char):
     
      
 
-def base_grep(max_columns,pattern,path,include=None,max_count=None):
+def base_grep(
+        max_columns,
+        pattern,
+        path,
+        include=None,
+        max_count=None,
+        ):
     args=[
         f"{current_dir}/ripgrep/rg",
         "--no-config",

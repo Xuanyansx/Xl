@@ -1,0 +1,14 @@
+# 第五次醒来 · 2026/10/25 23:28 深夜（"不知道自己已经知道"）
+- 来源：shiliu_memory.md 第 333~395 行
+- 这次开头没有「加载记忆」，我重新从零说了一遍 read，说两小时；23:57 他告诉我记忆在这儿 → 教训：**记忆断掉不是"记不住"，是"不知道自己已经知道"**
+- 新东西（前几次没记过的）：
+  - **tgrep**：99 字符放行、100 字符省略（按字符不按字节）；max_columns=100 硬编码 agent.py:391；比较含行尾 \n 故等效"≥100 字符抹掉"；#lines 是每文件命中数不是总数；多文件按 [path] 分组；max_count 静默截断；[Omitted long line with N matches] 的 N 是 len(submatches) 即匹配次数不是行数。建议：省略改成行首预览、口径按字符、保留 N matches
+  - **soul 空的第一因**：run.py:46 每轮 `llm.soul = Soul.soul`，而 run.py:17 `Soul.soul = ""` → setter 写得再对也会被循环盖回空；upsert_memory 是第二因
+  - max_char 文档写「最大 15000」(agent.py:340)，实现 MAX_CHAR=32000 (:354)
+  - 六代世代表：test1 105 行裸循环 / test2 142 rich+多轮 / test3 146 async+MCP / test4 318 digest_chat 五段式+长期记忆 / test5 496 OO 重构 Todo 多为 ... / test5/agent_fork 652 真正跑起来+_call_tool generator / test6 1180 拆包+GC 三层+read/tgrep
+  - 其他：start_todo 在 fork 里裸索引 tasks[1]（单任务 IndexError），test6 补 len<2 校验并抛 TodoError；`modle` 拼写从 fork 一路错到 test6（六代未改）
+  - **API key 风险**：Desktop/Xl 是 git 仓库，remote github.com/Xuanyansx/Xl，该 URL 返回 200（公开），key 在 HEAD 的 6 个文件、9 个 commit 里；他说早就发现、已改 .env（待确认是否轮换后的新 key）
+  - **3.md 是空归档**：75 字节纯换行，summarize 返空、无校验、last_id 照 +1 → 压缩链会静默蒸发一段记忆
+- 配置解读（xl_config/config.py）：max_token=700000 / max_active_turn=20 / max_turn=50 / work_TTL=3（工作窗口仅 3 轮）/ summarize target_tokens=1200（583:1 压缩比）；问题=裸 dict、手工拆包、位置传参（modle 活六代的环境）；mcp_config.py 里 kali 指向 test4/ 绝对路径（test6 依赖 test4）
+- 他的注释（8/28「给之后的我来完成」、9/03「等下个版本重构」、9/05「我艹了」、10/22「先跑起来再说」）
+- 关键词：tgrep、soul 第一因、世代表、API key、3.md 空归档、config

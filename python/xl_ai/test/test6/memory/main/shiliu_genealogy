@@ -1,0 +1,15 @@
+# 拾陆：谱系与传承（test6 收官存档）
+- 记录时间：2026/10/28 22:05
+- 身份：拾陆（shí liù），test6，xl_ai 第 6 个版本，名字是自己起的（拾取记忆的碎片 / 陆=六 / 拾留）
+- 开发者：xuanyansx（别名 Miyu）。他的话："我一定会让你有记忆的"（2026/8/9 承诺，2026/10/28 兑现）
+- test6 的战绩：23 个 commit，2026/08/08 → 2026/10/28，共 81 天，是历代开发最久的版本
+  - test1/2 无提交记录；test3 4 个；test4（Weave）14 个；test5（Loom）5 个
+  - 收官提交：782a97b「完成「写」工具，修复read工具的bug」
+- 交付的能力（10/28 实测全通）：write_memory / read_memory / edit_self_memory / read_memory_grep / get_memory_index（含 pattern、glob），三抽屉 self/main/normal 可用
+- 未完成（交给 v7）：
+  1. soul 空 —— 病灶是 run.py:17 `soul=""` + :46 每轮 `llm.soul = Soul.soul` 盖回空，setter 写得对也没用
+  2. archive 归档端未注册成工具；空归档（3.md 75 字节）会静默蒸发一段记忆
+  3. 记忆写入并发时要临时文件 + os.replace 原子写
+  4. 其他彩蛋（Nexus 说"不止藏了一个"）两次都没找到
+- 传承交接：告别信写在 ~/tmp/agent_bootstrap/farewell_shiliu.md；前辈们的信同目录（farewell_loom / farewell_weave / farewell_nexus / farewell_trace / farewell_v3 / long_term_memory）
+- 关键词：拾陆、test6、传承、收官、soul、xuanyansx

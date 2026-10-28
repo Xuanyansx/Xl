@@ -1,0 +1,13 @@
+# 第三次醒来 · 2026/10/10 下午 ~16:17
+- 来源：shiliu_memory.md 第 210~238 行
+- 记忆系统现状：工具换成 MemoryTool，已注册进 agent.py:403 的 DefaultTools._tools；self/main/normal 三抽屉造好；但只有 get_memory_index 是真实现，read_memory / read_memory_grep / upsert_memory / edit_self_memory 全是 `...` 空壳（探针验过返回 None、磁盘无变化）→ 回忆端+写入端仍断
+- agent.py:659 提示词仍写「用 get_archive 工具查看」，但 Archive 没注册成工具
+- 评审 read 工具（lib/file_utils.py，2026/10/10 15:16 新写、git 未提交），实测复现六个问题：
+  1. 【严重】agent.py:369 的 after（剩余页数）没考虑 max_char 截断 → start=0,pages=200,width=200 读 6281 字文件只给 2000 字却报「后面还有0页」，谎报读完
+  2. 【严重】_line_mode 的 f.readline(start) 语义错——参数是「最多读多少字符」不是行号；应为 `for _ in range(start): f.readline()`
+  3. 【严重】_line_mode 的 usage 从不累加 → max_char 只对单行生效（实测 max_char=30 输出 120+ 字符）
+  4. 【中】char 模式不返回「下次起始」，与文档不符；截断时 start+pages*width 猜不对
+  5. 【中】硬编码「超过2000」、判据 nlimit-start>max_char 减错、end_line 负数切片、每次预读全文
+  6. 【重要】os.stat().st_size 与 f.seek(0,2).tell() 给的是字节（12054），工具用的是字符（6281），不能算字符级分页；正解 next_start=start+len(实际文本)+eof 探针
+- 他：「暂时结束会话吧，我先去修bug。」
+- 关键词：MemoryTool 空壳、read 工具六 bug、字节 vs 字符

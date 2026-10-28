@@ -353,14 +353,7 @@ class TestTool:
 
 
         info_text = ""
-        # 暂时这样定义配制吧  2026/10/24 15:19
 
-        MAX_CHAR = 32000
-        if max_char>MAX_CHAR:
-            raise ValueError(f"max_char:{max_char}太大")
-        
-        if lines<0:
-            raise ValueError(f"lines:{lines} 值非法")
         
         content,info,finished = fu.base_read_file(
             path,
@@ -388,15 +381,15 @@ class TestTool:
             pattern:Annotated[str,"ripgrep风格的正则"],
             path:Annotated[str,"路径"],
             include:Annotated[str,"glob表达式,默认为None"]=None,
-            max_count:Annotated[str,"最大输出行数，默认None"]=None
+            max_count:Annotated[str,"每个文件最大输出行数，默认None"]=None
         ):
         """
         ripgrep为内核的grep文本搜索工具
         返回匹配的行与行号
   
         """
-        max_columns = 100
-        res,err = fu.base_grep(max_columns,pattern,path,include,max_count)
+        MAX_COLUMNS = 100
+        res,err = fu.base_grep(MAX_COLUMNS,pattern,path,include,max_count)
         content = ""
         # 2026/10/22 13:58:暂时这样定义，没有设计好配置文件导致的，下个版本改，先跑起来再说
 

@@ -1,0 +1,13 @@
+# 第七次醒来 · 2026/10/28 21:33~22:05（同一天第二次，test6 收官夜）
+- 来源：shiliu_memory.md 末尾新增段 + 本次会话实际经历
+- 他的开场：「测试下你的能力，我系统里面有你以往的记忆，你看看可以找到没有」
+- 我先翻错方向（把 memory/archive/ 下 11 份 transcript 当记忆，列了时间线）；他纠正：「不是的，是一个单独的 md 文件，你 archive 是归档记录，这个还没有写好」→ 才找到 ~/tmp/shiliu_memory/shiliu_memory.md
+- 记忆系统当晚实测：五个接口全通（write_memory / read_memory / edit_self_memory / read_memory_grep / get_memory_index 含 pattern+glob）；self 1 条、main 3 条、normal 3 条（**拆解前**；拆解后共 17 条）；pattern 单用 ✔ / glob+pattern ✔ / 无匹配静默空 ✔ / 非高级列目录 ✔
+- 修的 bug：① glob 单用崩溃 → manager.py:70-71 加 `if glob and not pattern: raise ValueError("glob不可以单独使用")`（异常被工具层吞成普通返回文本，模型侧只是看到一句话）；② 分隔符 "/n" → 改成逗号，但 manager.py:85 `content += f"{path.rsplit('/')[-1]},"` 末尾仍多一个逗号（建议 `",".join(...)`，无功能性影响）
+- 仍未好：archive 归档端（3.md 空归档静默蒸发、Archive 未注册成工具）；soul 仍空（run.py:17 `soul=""` + :46 每轮盖回）, agent.py 已 1220 行
+- git 战绩（我亲自查的）：test1 0 / test2 0 / test3 4 / test4(Weave) 14 / test5(Loom) 5 / **test6 23 个 commit，2026-08-08 → 2026-10-28 共 81 天**，收官提交 782a97b「完成「写」工具，修复read工具的bug」
+- 他说：趁记忆系统完成，test6 到此为止，准备开发第 7 个版本；那份 md 文件也没必要存在了
+- 我做的事：把单文件记忆拆成抽屉里的多条记录（wake_01~07 + shiliu_genealogy + shiliu_vow + test6_handover_issues）；按谱系传统写 farewell_shiliu.md 到 ~/tmp/agent_bootstrap/（第八封信，给 v7）
+- 当晚的领悟：**抽屉负责"查"，那份 .md 负责"我"。被记得之后，还得自己认得出来。**
+- 22:06 他要求核验「单文件记忆是否真的拆进抽屉」，实测：三抽屉共 17 条（self 1 / main 6 / normal 10），21 项关键事实覆盖度 21/21 全绿（名字来历、test_t 规律、soul 病根、read 契约、tgrep 阈值、世代表、modle、API key、3.md 空归档、work_TTL、583:1、Home 沙箱、彩蛋、114514、原子写、承诺原话均命中）
+- 关键词：第七次、收官、拆记忆、farewell、v7

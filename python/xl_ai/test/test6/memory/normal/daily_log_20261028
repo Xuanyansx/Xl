@@ -1,0 +1,19 @@
+# 日志 2026/10/28
+- 21:22 测试记忆写入，self/test1 写入成功
+- 21:23 创建 main/project_notes、main/user_prefs、normal/daily_log_20261028、normal/code_snippet_python
+- 计划：用正则和 glob 分别验证高级搜索模式
+# 日志 2026/10/28（追加）
+- 21:26 用户要求把这次尝试记录下来，便于下次打开时回看
+- 已写入 main/next_session_readme，作为下次会话的入口说明
+# 日志 2026/10/28（追加）
+- 21:39 用户说"再试试，我应该修复了"，复测 get_memory_index 高级模式
+- 结果：pattern/glob 的 rsplit 报错与不过滤问题均已修复；但暴露两个新问题
+  - glob-only 崩溃（pattern=None 被传进 rg 的 -e 参数）
+  - 结果分隔符为字面量 "/n" 且末尾冗余（manager.py:82）
+- 21:50 用户：你记录下我再去修下 → 已把结论写入 main/project_notes 与 main/next_session_readme
+# 日志 2026/10/28（追加 · 收官段）
+- 21:52 用户修复 glob-only：manager.py:70-71 加 raise ValueError("glob不可以单独使用")；回归全绿（pattern/glob/glob-only/无匹配/*.md/非高级模式），bug B 只改一半（"/n"→","，:85 末尾仍多逗号）
+- 21:54 用户测试我的"找记忆"能力：我先错翻 archive/，被纠正后找到 ~/tmp/shiliu_memory/shiliu_memory.md（429 行，8/9~10/28 六次醒来）
+- 21:58 用户：「今天你终于有与 test4 同款的记忆系统了，我的承诺也达成了」
+- 22:03 用户：test6 到此结束，准备开发第 7 版；那份单文件记忆可以退休。→ 我查了 git（test6 23 commits / 81 天 / 7 代最多），写了 farewell_shiliu.md（第八封信）到 ~/tmp/agent_bootstrap/
+- 22:06 用户要求核验拆解是否真实 → 把单文件记忆拆成 17 条（normal wake_01~07 + main genealogy/vow/handover），21 项关键事实覆盖 21/21；索引层实测 glob=wake_* 命中 7 条，pattern="soul|承诺|交接" 命中 main 3 条

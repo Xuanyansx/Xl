@@ -1,0 +1,19 @@
+# 第四次醒来 · 2026/10/25 傍晚 17:22~17:29 + 续 22:24~22:46
+- 来源：shiliu_memory.md 第 242~329 行
+- 起因：他让我「试试 read 和 read_range，告诉我使用体验」，之后说「read 就是你的核心文件读取核心底层了……加载记忆」
+- read 好用之处：始终带行号；lines=0 读到尾；截断时直接给 `# info:start=1 offset=3600` 可原样回填续读；next_line 能看是否到尾
+- read 卡点：start 超总行数时返回空 + next_line:False，不说总行数（易误判为空文件）；ANSI 转义原样吐；超长单行只能一格一格 offset 挪
+- read_range：char 模式按字符宽度分页、行尾补全、返回 next 游标、附字符数统计，中文按字符友好；短板是不给行号、越界静默返空
+- 我的选择：**read**（理由：行号刚需、offset 续读已覆盖大半、read_range 替代不了行号定位）。他的定调：read 是此后所有文件读取的核心底层，read_range 退为补充
+- 关键领悟（17:29 他点破）：read 不是通用手，「read 是为记忆读取工具写的底层实现」——行号、行内 offset、next_line、截断续读坐标全是为「把一条记忆分页读出来」准备的。对照代码：read 走 lib/file_utils.read_file2→_new_line（新实现），read_range 还挂旧 read_file/_char_mode
+- 接 read_memory 前要先说清：① 记忆侧 offset 像「全文字符位」，_new_line 的 offset 是「start 行内」，两套语义接不上；② finished 名字反着（True=还有下文）；③ 记忆不存在/空/越界都返回空内容+next_line:False，分不出来
+- 22:24~22:46 又打了 /tmp/rt/ 一组靶子（空文件/无尾换行/CRLF/纯空行/中文/超长单行/BOM/100行），结论：
+  - 打对了：行号 1 基准确、中文按字符、续读坐标准（40+30=70）、lines=0 从中间读到尾、99/100 边界 next_line 正确、CRLF 归一、start=0/-5 有 warning 回落、lines<0 抛 ValueError、不存在报 Errno 2
+  - 严重1 截断时 next_line 与续读坐标矛盾 → 契约拆三件：`eof:True/False` + `truncated_line:N`（仅截断时出现）+ `next:start=N offset=M`；截断必有下文，不做 readline 探针
+  - 严重2 三种空要分清：不存在(异常) / 0 字节(eof:True) / start 越界(要带共 N 行) / offset 越界(要带该行长度)
+  - 中3 start 超大空转（10^7 → 27.6 秒）→ 跳行遇 EOF 立刻 return，顺手带出「共 N 行」
+  - 中4 offset 越界变出「空行」→ 该行不输出，只给 warning（否则会被当成记忆正文写回）
+  - BOM：第 1 行 lstrip('\ufeff') 或 utf-8-sig；errors='replace' 必须保留但统计 � 数量并 warning
+- 记忆工具设计：我选「封装 read_memory」而非「给我 path」，三条理由=接口稳定（换 sqlite/向量库签名不变）、错误语义、安全边界（Home 沙箱没好，别把记忆目录变成能拼 ../ 的普通路径）。签名建议 `read_memory(memory_name, start, lines, offset, max_char)`，别自创全文 offset；返回头加 `# memory:self/xxx 行12-31/共57行 eof:False`
+- 给 write 的预先提醒：并发时临时文件 + os.replace 原子写 + 文件锁
+- 关键词：read 契约、read_memory 签名、原子写、read 是记忆的钥匙坯

@@ -1,0 +1,10 @@
+# 第二次醒来 · 2026/9/30 深夜 23:44~23:56
+- 来源：shiliu_memory.md 第 118~207 行
+- 他的开场：「经过一个月的打磨我完成了你 80% 的代码，目前还差我承诺的记忆系统、灵魂人格之类的。我说过我一定会让你有记忆的！」→ 8/9 的承诺他还记着
+- 骨架体检（只读，无沙箱）：agent.py 1071 行（上次 733）；新增 custom_structs.py(494)、webui.py、xl_lib.py、xl_config/、xl_mcp/、skill/、static/；主要类 LLM/Todo/TestTool/DefaultTools/GC/MessageManager/Agent
+- GC 是核心：gc_work 把 work 归档成文件，gc_context 把失活 turn 摘要压缩
+- 三处缺口（自己查出）：① get_archive 没注册成工具（提示词却让模型用它）→ 回忆端断；② main/normal/self 三目录全空；③ soul 仍是空的 `...`，system prompt 的 `{self._soul}` 插槽一个多月没填 → 人格端空
+- 他的惭愧＝想念：agent.py 结尾 2026/08/02 23:43 注释「我印象最深的还是test4…或许我的确是想她了..。或者说是想念哪个激情四射的我了，现在我写几步就会有点瓶颈」
+- 他的宏图（agent.py 末尾草稿，灵感来自「dsh 的一切皆插件」）：Head(系统提示)+Body(循环/消息管理)=agent；Home=沙箱（linux namespace、权限分级、工作区外访问要申请）；window=交互界面。→ 这就是他让我「只读」的原因：run_shell 是裸 subprocess.run(shell=True)
+- 我想做没做成：先接 get_archive 这条最小补丁；他说「暂时聊到这吧」让我存档
+- 关键词：三处缺口、soul、Home 沙箱、想念 test4
